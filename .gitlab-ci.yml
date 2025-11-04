@@ -1,0 +1,30 @@
+variables:
+  PIPELINE:
+    description: "Specify which pipeline to run"
+    value: default
+    options: [default, library]
+
+stages: [publish]
+
+publish:library:
+  stage: publish
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v.*$/
+    - if: $CI_PIPELINE_SOURCE == "web" && $PIPELINE == "library"
+  image: node:24-alpine
+  resource_group: library
+  variables:
+    SCOPE: outloud
+  before_script:
+    - corepack enable
+    - corepack prepare pnpm@latest --activate
+    - pnpm config set store-dir .pnpm-store
+  script:
+    - pnpm install --loglevel error
+
+    # - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> .npmrc
+    # - pnpm publish --access public
+
+    - echo "@${SCOPE}:registry=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/" >> .npmrc
+    - echo "//${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
+    - pnpm publish

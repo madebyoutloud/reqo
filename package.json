@@ -1,0 +1,46 @@
+{
+  "name": "@outloud/http",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "",
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "dist"
+  ],
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "source": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "imports": {
+    "~/*": "./src/*.js"
+  },
+  "scripts": {
+    "dev": "vitest dev",
+    "test": "vitest run",
+    "build": "tsdown",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "prepack": "pnpm build",
+    "release": "release-it"
+  },
+  "devDependencies": {
+    "@outloud/eslint-config": "^2.0.7",
+    "@types/node": "^24.10.0",
+    "eslint": "^9.39.0",
+    "msw": "^2.11.6",
+    "release-it": "^19.0.5",
+    "tsdown": "^0.15.12",
+    "typescript": "~5.8",
+    "vitest": "^1.5.0"
+  },
+  "dependencies": {
+    "@outloud/future": "^1.0.2"
+  }
+}
