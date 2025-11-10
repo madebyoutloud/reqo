@@ -1,4 +1,4 @@
-import type { RetryOptions } from './retry.js'
+import type { UserRetryOptions } from './retry.js'
 
 export type ValidateFn = (response: Response) => boolean
 
@@ -9,7 +9,7 @@ export type ResponseType = 'arrayBuffer' | 'blob' | 'json' | 'text'
 export type OptionalResponseType = ResponseType | false
 export type RequestMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS' | 'TRACE'
 
-export type ResponseTypes<T = any> = {
+export interface ResponseTypes<T = any> {
   arrayBuffer: ArrayBuffer
   blob: Blob
   text: string
@@ -37,7 +37,7 @@ export interface RequestConfig<
   responseType?: Type
   timeout?: number | false
 
-  retry?: RetryOptions | false
+  retry?: UserRetryOptions | boolean
 }
 
 export interface RequestOptions<

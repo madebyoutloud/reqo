@@ -4,10 +4,10 @@ import { catchError } from './helpers.js'
 
 let client: Client
 
-describe('Client', () => {
+describe('client', () => {
   beforeEach(() => {
     client = createClient({
-      url: 'http://localhost:3000',
+      url: 'http://localhost',
     })
   })
 
@@ -53,12 +53,12 @@ describe('Client', () => {
   })
 
   it('throws request error', async () => {
-    const [,error] = await catchError(client.get('/error', {}, {
-      retry: {},
-    }))
+    const [,error] = await catchError(client.get('/error', {}))
 
     expect(error)
       .toBeInstanceOf(errors.RequestError)
+
+    console.log(error)
 
     expect(error)
       .toMatchObject({

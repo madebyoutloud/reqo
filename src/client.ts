@@ -10,7 +10,8 @@ import type {
 } from './types.js'
 import { errors, RequestError, TimeoutError } from './errors.js'
 import { Context } from './context.js'
-import { Retry, type RetryOptions } from './retry.js'
+import { Retry, type UserRetryOptions } from './retry.js'
+import { HookRunner, type Hook, type Hooks } from './hooks.js'
 
 export interface ClientOptions {
   fetch: typeof fetch
@@ -19,11 +20,12 @@ export interface ClientOptions {
   headers?: HeaderValues
   url?: string
   validate?: ValidateFn
-  retry: RetryOptions | false
+  retry: UserRetryOptions | boolean
 }
 
 export class Client {
-  options: ClientOptions
+  readonly options: ClientOptions
+  private hooks: { [K in keyof Hooks]?: Hooks[K][] } = {}
 
   constructor(options: Partial<ClientOptions> = {}) {
     this.options = {
@@ -46,6 +48,31 @@ export class Client {
     ].join('/')
   }
 
+  on<K extends keyof Hooks>(event: K, fn: Hooks[K]) {
+    let hooks = this.hooks[event]
+
+    if (!hooks) {
+      hooks = []
+      this.hooks[event] = hooks
+    }
+
+    hooks.push(fn)
+
+    return this
+  }
+
+  off<K extends keyof Hooks>(event: K, fn: Hooks[K]) {
+    const hooks = this.hooks[event]
+
+    if (hooks) {
+      const index = hooks.indexOf(fn)
+
+      index !== -1 && hooks.splice(index, 1)
+    }
+
+    return this
+  }
+
   request<
     T = unknown,
     D = any,
@@ -57,7 +84,7 @@ export class Client {
       method: 'GET',
       redirect: this.options.redirect,
       timeout: this.options.timeout,
-      retry: this.options.retry ? { ...this.options.retry } : false,
+      retry: typeof this.options.retry === 'object' ? { ...this.options.retry } : this.options.retry,
       responseType: 'json' as Type,
       url: this.getUrl(url),
       headers: {
@@ -78,7 +105,7 @@ export class Client {
     let executor = fn
 
     if (options.retry) {
-      executor = () => new Retry(options.retry as RetryOptions)
+      executor = () => new Retry(typeof options.retry === 'object' ? options.retry : {})
         .run(fn, context)
     }
 
@@ -97,13 +124,28 @@ export class Client {
     Type extends OptionalResponseType = 'json',
   >(context: Context) {
     context.startAt ??= Date.now()
+    let response: Response<T, Type>
 
-    const originalResponse = await this.options.fetch(context.request)
-    const response = Object.assign(originalResponse, { data: undefined }) as Response<T, Type>
-    context.response = response
+    try {
+      await HookRunner.run(this.hooks.request, context.request)
 
-    const data = await this.$processResponse(originalResponse, context.config.responseType)
-    response.data = data as any
+      const originalResponse = await this.options.fetch(context.request)
+      response = Object.assign(originalResponse, { data: undefined }) as Response<T, Type>
+      context.response = response
+
+      const data = await this.$processResponse(originalResponse, context.config.responseType)
+      response.data = data as any
+    } catch (error) {
+      if (error instanceof RequestError) {
+        throw error
+      }
+
+      throw new RequestError({
+        ...context,
+        error: error as Error,
+        message: 'Request failed due to a network error.',
+      })
+    }
 
     if (!this.$validate(response)) {
       throw new RequestError({
