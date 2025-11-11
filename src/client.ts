@@ -184,7 +184,7 @@ export class Client {
 
     return setTimeout(() => {
       // returns last error if available, e.g. when retrying
-      context.controller.abort(context.error ?? new errors.TimeoutError(context.toObject()))
+      context.controller.abort(context.error ?? new errors.TimeoutError(context))
     }, context.config.timeout)
   }
 
