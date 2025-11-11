@@ -1,9 +1,7 @@
+import type { Context } from './context.js'
 import type { RequestConfig, Response } from './types.js'
 
-interface RequestErrorOptions {
-  config: RequestConfig
-  request: Request
-  response?: Response
+interface ErrorOptions {
   message?: string
   error?: Error
   code?: string
@@ -14,23 +12,25 @@ export class RequestError extends Error {
   request!: Request
   response?: Response
 
-  code!: string
+  code = ''
   status: number
   data?: any
 
-  constructor({ message, error, ...options }: RequestErrorOptions) {
-    super(message ?? error?.message)
+  constructor(context: Context, options: ErrorOptions = {}) {
+    super(options.message ?? options.error?.message)
 
-    if (error && 'code' in error && typeof error.code === 'string') {
-      this.code = error.code
+    if (options.code) {
+      this.code = options.code
+    } else if (options.error && 'code' in options.error && typeof options.error.code === 'string') {
+      this.code = options.error.code
     }
 
-    this.config = options.config
-    this.request = options.request
-    this.response = options.response
+    this.config = context.config
+    this.request = context.request
+    this.response = context.response
 
     this.status = this.response?.status ?? -1
-    this.cause = error
+    this.cause = options.error
     this.data = this.response?.data
   }
 
@@ -49,22 +49,23 @@ export class RequestError extends Error {
 
 export class TimeoutError extends RequestError {
   code = 'E_TIMEOUT'
-
-  constructor(options: RequestErrorOptions) {
-    super({ ...options, message: 'Request timed out.' })
-  }
+  message = 'Request timed out.'
 }
 
 export class CanceledError extends RequestError {
   code = 'E_CANCELED'
-
-  constructor(options: RequestErrorOptions) {
-    super({ ...options, message: 'Request was canceled.' })
-  }
+  message = 'Request was canceled.'
 }
 
 export const errors = {
   RequestError,
   TimeoutError,
   CanceledError,
+}
+
+// eslint-disable-next-line @typescript-eslint/naming-convention
+export interface errors {
+  RequestError: RequestError
+  TimeoutError: TimeoutError
+  CanceledError: CanceledError
 }

@@ -31,11 +31,9 @@ describe('retry', () => {
       retry: { limit: retries, delay: () => 10 },
     }))
 
-    expect(error)
-      .toBeInstanceOf(errors.RequestError)
+    expect(error).toBeInstanceOf(errors.RequestError)
 
-    expect(fn)
-      .toBeCalledTimes(retries + 1)
+    expect(fn).toBeCalledTimes(retries + 1)
   })
 
   it('timeouts', async () => {
@@ -56,13 +54,8 @@ describe('retry', () => {
 
     const requestError = error as RequestError
 
-    expect(error)
-      .toBeInstanceOf(errors.RequestError)
-
-    expect(requestError.status)
-      .toBe(500)
-
-    expect(fn)
-      .toBeCalledTimes(1)
+    expect(error).toBeInstanceOf(errors.RequestError)
+    expect(requestError.status).toBe(500)
+    expect(fn).toBeCalledTimes(1)
   })
 })

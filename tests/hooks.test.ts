@@ -23,8 +23,7 @@ describe('hooks', () => {
 
     await client.get('/json')
 
-    expect(fn)
-      .toBeCalled()
+    expect(fn).toBeCalled()
   })
 
   it('calls request hook once in case of retry', async () => {
@@ -37,8 +36,7 @@ describe('hooks', () => {
 
     await catchError(client.get('/error', {}, { retry: { delay: () => 50 } }))
 
-    expect(fn)
-      .toBeCalledTimes(1)
+    expect(fn).toBeCalledTimes(1)
   })
 
   it('calls error hook', async () => {
@@ -52,13 +50,8 @@ describe('hooks', () => {
 
     const [,error] = await catchError(client.get('/error'))
 
-    expect(error)
-      .toBeInstanceOf(RequestError)
-
-    expect(fn)
-      .toBeCalled()
-
-    expect(error?.message)
-      .toBe(message)
+    expect(error).toBeInstanceOf(RequestError)
+    expect(fn).toBeCalled()
+    expect(error?.message).toBe(message)
   })
 })

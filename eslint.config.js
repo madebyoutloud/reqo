@@ -6,3 +6,9 @@ export default createConfig({
     stylistic: true,
   },
 })
+  .append({
+    rules: {
+      '@stylistic/newline-per-chained-call': ['error', { ignoreChainWithDepth: 2 }],
+    },
+    files: ['**/*.test.ts'],
+  })

@@ -1,9 +1,9 @@
 import type { Context } from './context.js'
-import { RequestError } from './errors.js'
+import { errors } from './errors.js'
 import type { RequestMethod } from './types.js'
 
-export type DelayFn = (retryCount: number, error: RequestError) => number
-export type ValidateFn = (retryCount: number, error: RequestError, options: RetryOptions) => boolean
+export type DelayFn = (retryCount: number, error: errors['RequestError']) => number
+export type ValidateFn = (retryCount: number, error: errors['RequestError'], options: RetryOptions) => boolean
 
 export interface RetryOptions {
   limit: number
@@ -35,7 +35,7 @@ export class Retry {
         context.error = error as Error
         this.count++
 
-        if (!(error instanceof RequestError) ||
+        if (!(error instanceof errors.RequestError) ||
           !this.options.validate(this.count, error, this.options) ||
           context.controller.signal.aborted
         ) {

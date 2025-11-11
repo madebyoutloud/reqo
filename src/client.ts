@@ -7,7 +7,7 @@ import type {
   HeaderValues,
   ValidateFn,
 } from './types.js'
-import { errors, RequestError, TimeoutError } from './errors.js'
+import { errors } from './errors.js'
 import { Context } from './context.js'
 import { Retry, type UserRetryOptions } from './retry.js'
 import { HookRunner, type Hooks } from './hooks.js'
@@ -124,7 +124,7 @@ export class Client {
     try {
       response = await executor()
     } catch (error) {
-      const errorResults = await HookRunner.run(this.hooks.error, error as RequestError)
+      const errorResults = await HookRunner.run(this.hooks.error, error as errors['RequestError'])
 
       throw errorResults.reverse()
         .find((item) => item instanceof Error) ?? error
@@ -135,8 +135,8 @@ export class Client {
     return response
   }
 
-  isError(value: unknown): value is RequestError {
-    return value instanceof RequestError
+  isError(value: unknown): value is errors['RequestError'] {
+    return value instanceof errors.RequestError
   }
 
   private async fetch<
@@ -154,20 +154,18 @@ export class Client {
       const data = await this.processResponse(originalResponse, context.config.responseType)
       response.data = data as any
     } catch (error) {
-      if (error instanceof RequestError) {
+      if (error instanceof errors.RequestError) {
         throw error
       }
 
-      throw new RequestError({
-        ...context,
+      throw new errors.RequestError(context, {
         error: error as Error,
         message: 'Request failed due to a network error.',
       })
     }
 
     if (!this.validate(response)) {
-      throw new RequestError({
-        ...context,
+      throw new errors.RequestError(context, {
         message: `Request failed with status code ${response.status}.`,
       })
     }
@@ -186,7 +184,7 @@ export class Client {
 
     return setTimeout(() => {
       // returns last error if available, e.g. when retrying
-      context.controller.abort(context.error ?? new TimeoutError(context.toObject()))
+      context.controller.abort(context.error ?? new errors.TimeoutError(context.toObject()))
     }, context.config.timeout)
   }
 

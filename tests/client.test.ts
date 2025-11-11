@@ -18,8 +18,7 @@ describe('client', () => {
       responseType: 'text',
     })
 
-    expect(result.data)
-      .toBeTypeOf('string')
+    expect(result.data).toBeTypeOf('string')
   })
 
   it('returns json', async () => {
@@ -27,8 +26,7 @@ describe('client', () => {
       responseType: 'json',
     })
 
-    expect(result.data)
-      .toBeTypeOf('object')
+    expect(result.data).toBeTypeOf('object')
   })
 
   it('cancels the request', async () => {
@@ -36,8 +34,13 @@ describe('client', () => {
 
     request.cancel()
 
-    await expect(request).rejects
-      .toBeInstanceOf(errors.CanceledError)
+    const [,error] = await catchError(request)
+
+    expect(error).toBeInstanceOf(errors.CanceledError)
+    expect(error).toMatchObject({
+      message: 'Request was canceled.',
+      code: 'E_CANCELED',
+    })
   })
 
   it('throws timeout error', async () => {
@@ -45,41 +48,36 @@ describe('client', () => {
       timeout: 50,
     }))
 
-    expect(error)
-      .toBeInstanceOf(errors.TimeoutError)
+    expect(error).toBeInstanceOf(errors.TimeoutError)
 
-    expect(error)
-      .toMatchObject({
-        code: 'E_TIMEOUT',
-      })
+    expect(error).toMatchObject({
+      code: 'E_TIMEOUT',
+      message: 'Request timed out.',
+    })
   })
 
   it('throws request error', async () => {
     const [,error] = await catchError(client.get('/error', {}))
 
-    expect(error)
-      .toBeInstanceOf(errors.RequestError)
-
-    expect(error)
-      .toMatchObject({
-        status: 502,
-        data: { error: { message: 'Unknown error' } },
-      })
+    expect(error).toBeInstanceOf(errors.RequestError)
+    expect(error).toMatchObject({
+      status: 502,
+      data: { error: { message: 'Unknown error' } },
+    })
   })
 
   it('serializes error', async () => {
     const [,error] = await catchError(client.get('/error', {}))
     const json = (error as RequestError).toJSON()
 
-    expect(json)
-      .toEqual({
-        client: 'test',
-        url: 'http://localhost/error',
-        method: 'GET',
-        code: undefined,
-        message: error?.message,
-        status: 502,
-        data: { error: { message: 'Unknown error' } },
-      })
+    expect(json).toEqual({
+      client: 'test',
+      url: 'http://localhost/error',
+      method: 'GET',
+      code: '',
+      message: error?.message,
+      status: 502,
+      data: { error: { message: 'Unknown error' } },
+    })
   })
 })
