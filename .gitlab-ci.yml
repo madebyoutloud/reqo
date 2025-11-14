@@ -26,8 +26,8 @@ publish:library:
   script:
     - pnpm install --loglevel error
 
-    # - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> .npmrc
-    # - pnpm publish --access public
+    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> .npmrc
+    - pnpm publish --access public
 
     - echo "@${SCOPE}:registry=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/" >> .npmrc
     - echo "//${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
