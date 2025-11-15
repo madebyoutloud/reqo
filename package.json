@@ -1,7 +1,7 @@
 {
   "name": "@outloud/http",
   "type": "module",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "HTTP client based on Fetch API with built-in support for retries, timeouts, and JSON handling.",
   "engines": {
     "node": ">=20"
