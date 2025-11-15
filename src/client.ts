@@ -218,28 +218,28 @@ export class Client {
   get<
     T,
     Type extends OptionalResponseType = 'json',
-  >(url: string, params?: Params, options?: RequestOptions<never, Type>) {
+  >(url: string, params?: Params, options?: Omit<RequestOptions<never, Type>, 'method' | 'url' | 'params'>) {
     return this.request<T, never, Type>({ ...options, method: 'GET', url, params })
   }
 
   $get<
     T = unknown,
     Type extends OptionalResponseType = 'json',
-  >(url: string, params?: Params, options?: RequestOptions<never, Type>) {
+  >(url: string, params?: Params, options?: Omit<RequestOptions<never, Type>, 'method' | 'url' | 'params'>) {
     return this.returnData(this.get<T, Type>(url, params, options))
   }
 
   head<
     T = unknown,
     Type extends OptionalResponseType = 'json',
-  >(url: string, params?: Params, options?: RequestOptions<never, Type>) {
+  >(url: string, params?: Params, options?: Omit<RequestOptions<never, Type>, 'method' | 'url' | 'params'>) {
     return this.request<T, never, Type>({ ...options, method: 'HEAD', url, params })
   }
 
   $head<
     T = unknown,
     Type extends OptionalResponseType = 'json',
-  >(url: string, params?: Params, options?: RequestOptions<never, Type>) {
+  >(url: string, params?: Params, options?: Omit<RequestOptions<never, Type>, 'method' | 'url' | 'params'>) {
     return this.returnData(this.head<T, Type>(url, params, options))
   }
 
@@ -247,15 +247,15 @@ export class Client {
     T = unknown,
     D = any,
     Type extends OptionalResponseType = 'json',
-  >(url: string, data?: D, options?: RequestOptions<D, Type>) {
-    return this.request<T, D, Type>({ ...options, method: 'POST', data })
+  >(url: string, data?: D, options?: Omit<RequestOptions<D, Type>, 'method' | 'url' | 'data'>) {
+    return this.request<T, D, Type>({ ...options, method: 'POST', url, data })
   }
 
   $post<
     T = unknown,
     D = any,
     Type extends OptionalResponseType = 'json',
-  >(url: string, data?: D, options?: RequestOptions<D, Type>) {
+  >(url: string, data?: D, options?: Omit<RequestOptions<D, Type>, 'method' | 'url' | 'data'>) {
     return this.returnData(this.post<T, D, Type>(url, data, options))
   }
 
@@ -263,15 +263,15 @@ export class Client {
     T = unknown,
     D = any,
     Type extends OptionalResponseType = 'json',
-  >(url: string, data?: D, options?: RequestOptions<D, Type>) {
-    return this.request<T, D, Type>({ ...options, method: 'PUT', data })
+  >(url: string, data?: D, options?: Omit<RequestOptions<D, Type>, 'method' | 'url' | 'data'>) {
+    return this.request<T, D, Type>({ ...options, method: 'PUT', url, data })
   }
 
   $put<
     T = unknown,
     D = any,
     Type extends OptionalResponseType = 'json',
-  >(url: string, data?: D, options?: RequestOptions<D, Type>) {
+  >(url: string, data?: D, options?: Omit<RequestOptions<D, Type>, 'method' | 'url' | 'data'>) {
     return this.returnData(this.put<T, D, Type>(url, data, options))
   }
 
@@ -279,15 +279,15 @@ export class Client {
     T = unknown,
     D = any,
     Type extends OptionalResponseType = 'json',
-  >(url: string, data?: D, options?: RequestOptions<D, Type>) {
-    return this.request<T, D, Type>({ ...options, method: 'PATCH', data })
+  >(url: string, data?: D, options?: Omit<RequestOptions<D, Type>, 'method' | 'url' | 'data'>) {
+    return this.request<T, D, Type>({ ...options, method: 'PATCH', url, data })
   }
 
   $patch<
     T = unknown,
     D = any,
     Type extends OptionalResponseType = 'json',
-  >(url: string, data?: D, options?: RequestOptions<D, Type>) {
+  >(url: string, data?: D, options?: Omit<RequestOptions<D, Type>, 'method' | 'url' | 'data'>) {
     return this.returnData(this.patch<T, D, Type>(url, data, options))
   }
 
@@ -295,7 +295,7 @@ export class Client {
     T = unknown,
     D = any,
     Type extends OptionalResponseType = 'json',
-  >(url: string, options?: RequestOptions<D, Type>) {
+  >(url: string, options?: Omit<RequestOptions<D, Type>, 'method' | 'url'>) {
     return this.request<T, D, Type>({ ...options, method: 'DELETE', url })
   }
 
@@ -303,7 +303,7 @@ export class Client {
     T = unknown,
     D = any,
     Type extends OptionalResponseType = 'json',
-  >(url: string, options?: RequestOptions<D, Type>) {
+  >(url: string, options?: Omit<RequestOptions<D, Type>, 'method' | 'url'>) {
     return this.returnData(this.delete<T, D, Type>(url, options))
   }
 }
