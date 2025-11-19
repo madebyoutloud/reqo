@@ -2,8 +2,8 @@ import type { UserRetryOptions } from './retry.js'
 
 export type ValidateFn = (response: Response) => boolean
 
-export type Params = Record<string, unknown>
-export type HeaderValues = Record<string, unknown>
+export type Params = Record<string, any>
+export type HeaderValues = Record<string, any>
 
 export type ResponseType = 'arrayBuffer' | 'blob' | 'json' | 'text'
 export type OptionalResponseType = ResponseType | false
