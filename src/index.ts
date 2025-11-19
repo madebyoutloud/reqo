@@ -6,3 +6,5 @@ export { errors } from './errors.js'
 export function createClient(options: Partial<ClientOptions> = {}) {
   return new Client(options)
 }
+
+export const http = createClient()
