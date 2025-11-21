@@ -42,10 +42,16 @@ export class Client {
   }
 
   getUrl(path = '/') {
+    let baseUrl = this.baseUrl
+
+    if (!baseUrl && typeof location !== 'undefined') {
+      baseUrl = location.origin
+    }
+
     return [
-      (this.baseUrl ?? '').replace(/\/+$/, ''),
-      path.replace(/^\/+/, ''),
-    ].join('/')
+      (baseUrl ?? '').replace(/\/+$/, ''),
+      path.startsWith('/') ? path : `/${path}`,
+    ].join('')
   }
 
   on<K extends keyof Hooks>(event: K, fn: Hooks[K]) {
