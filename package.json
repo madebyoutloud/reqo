@@ -26,6 +26,7 @@
     "pretest": "pnpm run lint && pnpm run typecheck",
     "test": "pnpm run quick:test",
     "quick:test": "vitest run",
+    "bench": "vitest bench",
     "build": "tsdown",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",

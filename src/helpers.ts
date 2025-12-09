@@ -28,3 +28,10 @@ export function isNativeClass(value: unknown, className: readonly string[] | str
 
   return getNativeClass(value) === className
 }
+
+export function mergeErrorStack(error: Error, stack: string) {
+  const originalStack = error.stack ?? ''
+
+  const index = originalStack.indexOf(error.message) + error.message.length
+  error.stack = originalStack.slice(0, index) + '\n' + stack.substring('Error: \n'.length)
+}

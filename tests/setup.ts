@@ -3,6 +3,6 @@ import { beforeAll, afterEach, afterAll } from 'vitest'
 import './mocks/storage.js'
 import { server } from './mocks/api.js'
 
-beforeAll(() => server.listen())
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 afterEach(() => server.resetHandlers())
 afterAll(() => server.close())

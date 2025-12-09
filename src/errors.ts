@@ -1,4 +1,5 @@
 import type { Context } from './context.js'
+import { mergeErrorStack } from './helpers.js'
 import type { Params, RequestConfig, Response } from './types.js'
 
 interface ErrorOptions {
@@ -54,6 +55,10 @@ export class RequestError extends Error {
 
   constructor(context: Context, options: ErrorOptions = {}) {
     super(options.message ?? options.error?.message)
+
+    if (context.stack) {
+      mergeErrorStack(this, context.stack)
+    }
 
     if (options.code) {
       this.code = options.code

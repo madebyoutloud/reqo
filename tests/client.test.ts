@@ -81,4 +81,10 @@ describe('client', () => {
       data: { error: { message: 'Unknown error' } },
     })
   })
+
+  it('captures stack trace', async () => {
+    const [,error] = await catchError(client.get('/error', {}))
+
+    console.log(error.stack)
+  })
 })

@@ -102,6 +102,7 @@ export class Client {
     })
 
     const timeoutId = this.timeout(context)
+    Error.captureStackTrace(context)
 
     return Future.withCancel(
       this.$request<T, Type>(context),

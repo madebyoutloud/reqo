@@ -8,6 +8,8 @@ export class Context {
   request?: Request
   response?: Response
 
+  stack?: string
+
   error?: Error
   startAt?: number
 
