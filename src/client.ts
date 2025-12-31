@@ -23,6 +23,8 @@ export interface ClientOptions {
   retry: UserRetryOptions | boolean
 }
 
+const URL_REGEX = /^https?:\/\//
+
 export class Client {
   readonly options: ClientOptions
   private hooks: { [K in keyof Hooks]?: Hooks[K][] } = {}
@@ -42,16 +44,21 @@ export class Client {
   }
 
   getUrl(path = '/') {
-    let baseUrl = this.baseUrl
+    let baseUrl = (this.baseUrl ?? '').replace(/\/+$/, '')
 
-    if (!baseUrl && typeof location !== 'undefined') {
-      baseUrl = location.origin
+    if (!URL_REGEX.test(baseUrl) && typeof location !== 'undefined') {
+      if (baseUrl && !baseUrl.startsWith('/')) {
+        baseUrl = `/${baseUrl}`
+      }
+
+      baseUrl = `${location.origin}${baseUrl}`
     }
 
-    return [
-      (baseUrl ?? '').replace(/\/+$/, ''),
-      path.startsWith('/') ? path : `/${path}`,
-    ].join('')
+    if (!path.startsWith('/')) {
+      path = `/${path}`
+    }
+
+    return `${baseUrl}${path}`
   }
 
   on<K extends keyof Hooks>(event: K, fn: Hooks[K]) {
