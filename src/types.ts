@@ -1,3 +1,4 @@
+import type { Headers } from './headers.js'
 import type { UserRetryOptions } from './retry.js'
 
 export type ValidateFn = (response: Response) => boolean
@@ -18,6 +19,29 @@ export interface ResponseTypes<T = any> {
   none: undefined
 }
 
+export interface RequestOptions<
+  D = any,
+  Type extends OptionalResponseType = 'auto',
+> {
+  url?: string
+  method?: RequestMethod
+  params?: Params
+
+  headers?: HeaderValues
+
+  redirect?: RequestInit['redirect']
+  signal?: AbortSignal
+  credentials?: RequestInit['credentials']
+  mode?: RequestInit['mode']
+  dispatcher?: unknown
+
+  data?: D
+  responseType?: Type
+  timeout?: number | false
+
+  retry?: UserRetryOptions | boolean
+}
+
 export interface RequestConfig<
   D = any,
   Type extends OptionalResponseType = any,
@@ -29,9 +53,9 @@ export interface RequestConfig<
 
   url: string
   method: RequestMethod
-  params?: Params
+  params: Params
 
-  headers?: HeaderValues
+  headers: Headers
 
   redirect?: RequestInit['redirect']
   readonly signal?: AbortSignal
@@ -46,14 +70,11 @@ export interface RequestConfig<
   retry?: UserRetryOptions | boolean
 }
 
-export interface RequestOptions<
-  D = any,
-  Type extends OptionalResponseType = any,
-> extends Partial<RequestConfig<D, Type>> {}
-
 export interface Response<
   T = any,
   Type extends OptionalResponseType = any,
 > extends globalThis.Response {
-  data: ResponseTypes<T>[Type extends false ? 'none' : Type]
+  data: ResponseTypes<T>[
+    ResponseType extends Type ? 'auto' : Type extends false ? 'none' : Type
+  ]
 }

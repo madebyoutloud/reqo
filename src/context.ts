@@ -1,5 +1,4 @@
 import type { OptionalResponseType, Params, RequestConfig, Response } from './types.js'
-import { Headers } from './headers.js'
 import { responseTypes, streamTypes } from './constants.js'
 import { isFormData, isNativeClass } from './helpers.js'
 
@@ -46,15 +45,16 @@ export class Context {
   }
 
   buildRequest() {
-    const headers = new Headers(this.config.headers)
-    const accept = this.detectAccept(this.config.responseType)
-    headers.set('accept', accept)
+    if (!this.config.headers.has('accept')) {
+      const accept = this.detectAccept(this.config.responseType)
+      this.config.headers.set('accept', accept)
+    }
 
-    const body = this.transformBody(this.config.data, headers)
+    const body = this.transformBody(this.config.data)
 
     const request = new Request(this.buildUrl(), {
       method: this.config.method,
-      headers: headers.toObject(),
+      headers: this.config.headers.toObject(),
       signal: this.controller.signal,
       redirect: this.config.redirect,
       credentials: this.config.credentials,
@@ -77,12 +77,12 @@ export class Context {
     return responseTypes[responseType]
   }
 
-  private transformBody(body: unknown, headers: Headers): any {
+  private transformBody(body: unknown): any {
     if (body === undefined || body === null) {
       return body
     }
 
-    const contentType = headers.get('content-type') ?? ''
+    const contentType = this.config.headers.get('content-type') ?? ''
 
     if (isFormData(body)) {
       return body
@@ -101,7 +101,7 @@ export class Context {
         return this.buildQuery(body as Params)
       }
 
-      headers.set('content-type', 'application/json')
+      this.config.headers.set('content-type', 'application/json')
       return JSON.stringify(body)
     }
 

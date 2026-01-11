@@ -11,6 +11,7 @@ import { errors } from './errors.js'
 import { Context } from './context.js'
 import { Retry, type UserRetryOptions } from './retry.js'
 import { HookRunner, type Hooks } from './hooks.js'
+import { Headers } from './headers.js'
 
 export interface ClientOptions {
   id?: string
@@ -89,10 +90,10 @@ export class Client {
   request<
     T = unknown,
     D = any,
-    Type extends OptionalResponseType = 'auto',
+    Type extends OptionalResponseType = OptionalResponseType,
     // Path extends string = '/',
     // Method extends RequestMethod = 'GET',
-  >({ url, headers, ...options }: RequestOptions<D, Type> = {}): Future<Response<T, Type>> {
+  >({ url, headers, params, ...options }: RequestOptions<D, Type> = {}): Future<Response<T, Type>> {
     const context = new Context({
       id: this.options.id,
       method: 'GET',
@@ -101,10 +102,11 @@ export class Client {
       retry: typeof this.options.retry === 'object' ? { ...this.options.retry } : this.options.retry,
       responseType: 'auto' as Type,
       url: this.getUrl(url),
-      headers: {
+      params: params ?? {},
+      headers: new Headers({
         ...this.options.headers,
         ...headers,
-      },
+      }),
       ...options,
     })
 
@@ -120,17 +122,13 @@ export class Client {
       })
   }
 
-  private async $request<
-    T = unknown,
-    Type extends OptionalResponseType = 'auto',
-  >(context: Context) {
+  private async $request<T, Type extends OptionalResponseType>(context: Context) {
     await HookRunner.run(this.hooks.init, context.config)
 
     const fn = () => this.fetch<T, Type>(context)
     let executor = fn
 
     if (context.config.retry) {
-      // TODO: run hooks on retry?
       executor = () => new Retry(typeof context.config.retry === 'object' ? context.config.retry : {})
         .run(fn, context)
     }
@@ -155,10 +153,7 @@ export class Client {
     return value instanceof errors.RequestError
   }
 
-  private async fetch<
-    T = unknown,
-    Type extends OptionalResponseType = 'auto',
-  >(context: Context) {
+  private async fetch<T, Type extends OptionalResponseType>(context: Context) {
     context.startAt ??= Date.now()
     let response: Response<T, Type>
 
@@ -254,28 +249,28 @@ export class Client {
   // shorthand methods
   get<
     T,
-    Type extends OptionalResponseType = 'auto',
+    Type extends OptionalResponseType = OptionalResponseType,
   >(url: string, params?: Params, options?: Omit<RequestOptions<never, Type>, 'method' | 'url' | 'params'>) {
     return this.request<T, never, Type>({ ...options, method: 'GET', url, params })
   }
 
   $get<
     T = unknown,
-    Type extends OptionalResponseType = 'auto',
+    Type extends OptionalResponseType = OptionalResponseType,
   >(url: string, params?: Params, options?: Omit<RequestOptions<never, Type>, 'method' | 'url' | 'params'>) {
     return this.returnData(this.get<T, Type>(url, params, options))
   }
 
   head<
     T = unknown,
-    Type extends OptionalResponseType = 'auto',
+    Type extends OptionalResponseType = OptionalResponseType,
   >(url: string, params?: Params, options?: Omit<RequestOptions<never, Type>, 'method' | 'url' | 'params'>) {
     return this.request<T, never, Type>({ ...options, method: 'HEAD', url, params })
   }
 
   $head<
     T = unknown,
-    Type extends OptionalResponseType = 'auto',
+    Type extends OptionalResponseType = OptionalResponseType,
   >(url: string, params?: Params, options?: Omit<RequestOptions<never, Type>, 'method' | 'url' | 'params'>) {
     return this.returnData(this.head<T, Type>(url, params, options))
   }
@@ -283,7 +278,7 @@ export class Client {
   post<
     T = unknown,
     D = any,
-    Type extends OptionalResponseType = 'auto',
+    Type extends OptionalResponseType = OptionalResponseType,
   >(url: string, data?: D, options?: Omit<RequestOptions<D, Type>, 'method' | 'url' | 'data'>) {
     return this.request<T, D, Type>({ ...options, method: 'POST', url, data })
   }
@@ -291,7 +286,7 @@ export class Client {
   $post<
     T = unknown,
     D = any,
-    Type extends OptionalResponseType = 'auto',
+    Type extends OptionalResponseType = OptionalResponseType,
   >(url: string, data?: D, options?: Omit<RequestOptions<D, Type>, 'method' | 'url' | 'data'>) {
     return this.returnData(this.post<T, D, Type>(url, data, options))
   }
@@ -299,7 +294,7 @@ export class Client {
   put<
     T = unknown,
     D = any,
-    Type extends OptionalResponseType = 'auto',
+    Type extends OptionalResponseType = OptionalResponseType,
   >(url: string, data?: D, options?: Omit<RequestOptions<D, Type>, 'method' | 'url' | 'data'>) {
     return this.request<T, D, Type>({ ...options, method: 'PUT', url, data })
   }
@@ -307,7 +302,7 @@ export class Client {
   $put<
     T = unknown,
     D = any,
-    Type extends OptionalResponseType = 'auto',
+    Type extends OptionalResponseType = OptionalResponseType,
   >(url: string, data?: D, options?: Omit<RequestOptions<D, Type>, 'method' | 'url' | 'data'>) {
     return this.returnData(this.put<T, D, Type>(url, data, options))
   }
@@ -315,7 +310,7 @@ export class Client {
   patch<
     T = unknown,
     D = any,
-    Type extends OptionalResponseType = 'auto',
+    Type extends OptionalResponseType = OptionalResponseType,
   >(url: string, data?: D, options?: Omit<RequestOptions<D, Type>, 'method' | 'url' | 'data'>) {
     return this.request<T, D, Type>({ ...options, method: 'PATCH', url, data })
   }
@@ -323,7 +318,7 @@ export class Client {
   $patch<
     T = unknown,
     D = any,
-    Type extends OptionalResponseType = 'auto',
+    Type extends OptionalResponseType = OptionalResponseType,
   >(url: string, data?: D, options?: Omit<RequestOptions<D, Type>, 'method' | 'url' | 'data'>) {
     return this.returnData(this.patch<T, D, Type>(url, data, options))
   }
@@ -331,7 +326,7 @@ export class Client {
   delete<
     T = unknown,
     D = any,
-    Type extends OptionalResponseType = 'auto',
+    Type extends OptionalResponseType = OptionalResponseType,
   >(url: string, options?: Omit<RequestOptions<D, Type>, 'method' | 'url'>) {
     return this.request<T, D, Type>({ ...options, method: 'DELETE', url })
   }
@@ -339,7 +334,7 @@ export class Client {
   $delete<
     T = unknown,
     D = any,
-    Type extends OptionalResponseType = 'auto',
+    Type extends OptionalResponseType = OptionalResponseType,
   >(url: string, options?: Omit<RequestOptions<D, Type>, 'method' | 'url'>) {
     return this.returnData(this.delete<T, D, Type>(url, options))
   }

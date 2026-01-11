@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, expectTypeOf, it } from 'vitest'
 import { type Client, createClient, errors } from '../src/index.js'
 import type { RequestError } from '../src/errors.js'
 import { Context } from '../src/context.js'
+import { Headers } from '../src/headers.js'
 import { catchError } from './helpers.js'
 
 let client: Client
@@ -20,6 +21,7 @@ describe('client', () => {
     })
 
     expect(result.data).toBeTypeOf('string')
+    expectTypeOf(result.data).toEqualTypeOf<string>()
   })
 
   it('returns json', async () => {
@@ -98,7 +100,8 @@ describe('client', () => {
     const context = new Context({
       url: 'http://localhost/text',
       method: 'GET',
-      params: { id},
+      params: { id },
+      headers: new Headers(),
     })
 
     const request = context.buildRequest()
