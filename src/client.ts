@@ -111,7 +111,9 @@ export class Client {
     })
 
     const timeoutId = this.timeout(context)
-    Error.captureStackTrace(context)
+
+    // eslint-disable-next-line unicorn/error-message
+    context.stack = new Error().stack
 
     return Future.withCancel(
       this.$request<T, Type>(context),
