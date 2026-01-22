@@ -1,7 +1,7 @@
 {
   "name": "@outloud/http",
   "type": "module",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "HTTP client based on Fetch API with built-in support for retries, timeouts, and JSON handling.",
   "homepage": "https://http.byoutloud.com",
   "repository": {
