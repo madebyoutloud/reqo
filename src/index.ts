@@ -13,4 +13,5 @@ export function createClient(options: Partial<ClientOptions> = {}) {
   return new Client(options)
 }
 
-export const http = createClient()
+export const reqo = createClient()
+export const http = reqo

@@ -1,12 +1,12 @@
 {
-  "name": "@outloud/http",
+  "name": "@outloud/reqo",
   "type": "module",
   "version": "1.0.3",
   "description": "HTTP client based on Fetch API with built-in support for retries, timeouts, and JSON handling.",
-  "homepage": "https://http.byoutloud.com",
+  "homepage": "https://reqo.byoutloud.com",
   "repository": {
     "type": "git",
-    "url": "https://github.com/madebyoutloud/http.git"
+    "url": "https://github.com/madebyoutloud/reqo.git"
   },
   "license": "MIT",
   "engines": {
