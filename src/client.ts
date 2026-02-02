@@ -45,6 +45,10 @@ export class Client {
   }
 
   getUrl(path = '/') {
+    if (URL_REGEX.test(path)) {
+      return path
+    }
+
     let baseUrl = (this.baseUrl ?? '').replace(/\/+$/, '')
 
     if (!URL_REGEX.test(baseUrl) && typeof location !== 'undefined') {
