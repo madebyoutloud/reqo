@@ -17,10 +17,12 @@ npm install @outloud/reqo
 ```ts
 import { reqo } from '@outloud/reqo'
 
-const data = await reqo.$get('https://api.example.com/data', {
-  retries: 3,
+const data = await reqo.$get<{ status: boolean }>('https://api.example.com/data', {}, {
+  retry: { limit: 3 },
   timeout: 5000
 })
+
+console.log(data) // { status: true }
 ```
 
 ## Documentation
