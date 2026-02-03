@@ -17,3 +17,8 @@ export const responseTypes: Record<ResponseType, string> = {
 }
 
 export const methods: RequestMethod[] = ['GET', 'HEAD', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS', 'TRACE']
+
+export const contentTypes = {
+  json: /application\/(?:[\w.]+\+)?json/,
+  text: /text\/plain/,
+}

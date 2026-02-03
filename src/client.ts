@@ -12,6 +12,7 @@ import { Context } from './context.js'
 import { Retry, type UserRetryOptions } from './retry.js'
 import { HookRunner, type Hooks } from './hooks.js'
 import { Headers } from './headers.js'
+import { contentTypes } from './constants.js'
 
 export interface ClientOptions {
   id?: string
@@ -224,7 +225,7 @@ export class Client {
       return
     }
 
-    const contentType = response.headers.get('content-type')
+    const contentType = response.headers.get('content-type') ?? ''
 
     switch (type) {
       case 'arrayBuffer':
@@ -236,11 +237,11 @@ export class Client {
       case 'text':
         return response.text()
       case 'auto':
-        if (contentType?.includes('application/json')) {
+        if (contentTypes.json.test(contentType)) {
           return response.json()
         }
 
-        if (contentType?.includes('text/plain') || !contentType) {
+        if (!contentType || contentTypes.text.test(contentType)) {
           return response.text()
         }
 
