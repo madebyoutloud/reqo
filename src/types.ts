@@ -36,6 +36,7 @@ export interface RequestOptions<
   credentials?: RequestInit['credentials']
   mode?: RequestInit['mode']
   dispatcher?: unknown
+  keepalive?: boolean
 
   data?: D
   /** @default 'auto' */
@@ -67,6 +68,7 @@ export interface RequestConfig<
   credentials?: RequestInit['credentials']
   mode?: RequestInit['mode']
   dispatcher?: unknown
+  keepalive?: boolean
 
   data?: D
   responseType?: Type

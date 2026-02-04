@@ -64,6 +64,7 @@ export class Context implements RequestState {
       // @ts-expect-error unsupported in lib.dom.ts
       dispatcher: this.config.dispatcher as any,
       body,
+      keepalive: this.config.keepalive,
     })
 
     this.request = request
