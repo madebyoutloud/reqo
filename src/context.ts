@@ -5,7 +5,6 @@ import type { errors } from './errors.js'
 
 export class Context implements RequestState {
   readonly controller: AbortController
-  request?: Request
   response?: Response
 
   stack?: string
@@ -28,14 +27,6 @@ export class Context implements RequestState {
     return this.config.timeout && this.startAt ? this.startAt + this.config.timeout : undefined
   }
 
-  toObject() {
-    return {
-      config: this.config,
-      request: this.request,
-      response: this.response,
-    }
-  }
-
   buildUrl() {
     const url = new URL(this.config.url)
 
@@ -54,22 +45,17 @@ export class Context implements RequestState {
 
     const body = this.transformBody(this.config.data)
 
-    const request = new Request(this.buildUrl(), {
+    return {
       method: this.config.method,
       headers: this.config.headers.toObject(),
       signal: this.controller.signal,
       redirect: this.config.redirect,
       credentials: this.config.credentials,
       mode: this.config.mode,
-      // @ts-expect-error unsupported in lib.dom.ts
-      dispatcher: this.config.dispatcher as any,
+      dispatcher: this.config.dispatcher,
       body,
       keepalive: this.config.keepalive,
-    })
-
-    this.request = request
-
-    return request
+    }
   }
 
   private detectAccept(responseType: OptionalResponseType) {
@@ -92,7 +78,8 @@ export class Context implements RequestState {
     }
 
     if (body instanceof URLSearchParams) {
-      return body
+      this.config.headers.set('content-type', 'application/x-www-form-urlencoded')
+      return body.toString()
     }
 
     if (isNativeClass(body, streamTypes)) {

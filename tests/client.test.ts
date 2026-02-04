@@ -104,9 +104,9 @@ describe('client', () => {
       headers: new Headers(),
     })
 
-    const request = context.buildRequest()
+    const url = context.buildUrl()
     const params = id.map((item) => `${encodeURIComponent('id[]')}=${encodeURIComponent(item)}`).join('&')
 
-    expect(request.url).toBe(`http://localhost/text?${params}`)
+    expect(url.toString()).toBe(`http://localhost/text?${params}`)
   })
 })

@@ -16,13 +16,14 @@ import { contentTypes } from './constants.js'
 
 export interface ClientOptions {
   id?: string
-  fetch: typeof fetch
+  fetch: (input: string | URL | Request, init?: RequestInit) => Promise<globalThis.Response>
   redirect: RequestInit['redirect']
   timeout: number | false
   headers?: HeaderValues
   url?: string
   validate?: ValidateFn
   retry: UserRetryOptions | boolean
+  dispatcher?: unknown
 }
 
 const URL_REGEX = /^https?:\/\//
@@ -104,6 +105,7 @@ export class Client {
       method: 'GET',
       redirect: this.options.redirect,
       timeout: this.options.timeout,
+      dispatcher: this.options.dispatcher,
       retry: typeof this.options.retry === 'object' ? { ...this.options.retry } : this.options.retry,
       responseType: 'auto' as Type,
       url: this.getUrl(url),
@@ -172,7 +174,11 @@ export class Client {
     await HookRunner.run(this.hooks.request, context.config, context)
 
     try {
-      const originalResponse = await this.options.fetch(context.buildRequest())
+      const originalResponse = await this.options.fetch(
+        context.buildUrl(),
+        context.buildRequest(),
+      )
+
       response = Object.assign(originalResponse, { data: undefined }) as Response<T, Type>
       context.response = response
     } catch (error) {

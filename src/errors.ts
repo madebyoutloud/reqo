@@ -9,7 +9,7 @@ interface ErrorOptions {
 }
 
 const Props = ['url', 'method', 'params'] as const
-const HiddenProps = ['config', 'request', 'response'] as const
+const HiddenProps = ['config', 'response'] as const
 
 export class RequestError extends Error {
   /**
