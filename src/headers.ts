@@ -1,9 +1,9 @@
-import type { HeaderValues } from './types.js'
+import type { Values } from './types.js'
 
 export class Headers {
   private values = new Map<string, string>()
 
-  constructor(values?: HeaderValues) {
+  constructor(values?: Values) {
     values && this.set(values)
   }
 
@@ -12,8 +12,8 @@ export class Headers {
   }
 
   set(name: string, value: unknown, override?: boolean): this
-  set(values: HeaderValues, override?: boolean): this
-  set(values: string | HeaderValues, ...args: any[]): this {
+  set(values: Values, override?: boolean): this
+  set(values: string | Values, ...args: any[]): this {
     if (typeof values === 'object') {
       Object.entries(values)
         .forEach(([name, value]) => {

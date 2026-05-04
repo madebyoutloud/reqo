@@ -1,8 +1,10 @@
+/* eslint-disable max-lines-per-function */
 import { beforeEach, describe, expect, expectTypeOf, it } from 'vitest'
-import { type Client, createClient, errors } from '../src/index.js'
+import { createClient, errors } from '../src/index.js'
 import type { RequestError } from '../src/errors.js'
 import { Context } from '../src/context.js'
 import { Headers } from '../src/headers.js'
+import type { Client } from '../src/client.js'
 import { catchError } from './helpers.js'
 
 let client: Client
@@ -16,7 +18,7 @@ describe('client', () => {
   })
 
   it('returns text', async () => {
-    const result = await client.get('/text', {}, {
+    const result = await client.get('/text', {
       responseType: 'text',
     })
 
@@ -25,7 +27,7 @@ describe('client', () => {
   })
 
   it('returns json', async () => {
-    const result = await client.get('/json', {}, {
+    const result = await client.get('/json', {
       responseType: 'json',
     })
 
@@ -33,7 +35,7 @@ describe('client', () => {
   })
 
   it('cancels the request', async () => {
-    const request = client.get('/long', {})
+    const request = client.get('/long')
 
     request.cancel()
 
@@ -47,7 +49,7 @@ describe('client', () => {
   })
 
   it('throws timeout error', async () => {
-    const [, error] = await catchError(client.get('/long', {}, {
+    const [, error] = await catchError(client.get('/long', {
       timeout: 50,
     }))
 
@@ -60,7 +62,7 @@ describe('client', () => {
   })
 
   it('throws request error', async () => {
-    const [,error] = await catchError(client.get('/error', {}))
+    const [,error] = await catchError(client.get('/error'))
 
     expect(error).toBeInstanceOf(errors.RequestError)
     expect(error).toMatchObject({
@@ -70,7 +72,7 @@ describe('client', () => {
   })
 
   it('serializes error', async () => {
-    const [,error] = await catchError(client.get('/error', { test: 1 }))
+    const [,error] = await catchError(client.get('/error', { query: { test: 1 } }))
     const json = (error as RequestError).toJSON()
 
     expect(json).toEqual({
@@ -78,7 +80,8 @@ describe('client', () => {
       url: 'http://localhost/error',
       method: 'GET',
       code: '',
-      params: { test: 1 },
+      params: {},
+      query: { test: 1 },
       message: error?.message,
       status: 502,
       data: { error: { message: 'Unknown error' } },
@@ -100,13 +103,14 @@ describe('client', () => {
     const context = new Context({
       url: 'http://localhost/text',
       method: 'GET',
-      params: { id },
+      query: { id },
+      params: {},
       headers: new Headers(),
     })
 
     const url = context.buildUrl()
-    const params = id.map((item) => `${encodeURIComponent('id[]')}=${encodeURIComponent(item)}`).join('&')
+    const query = id.map((item) => `${encodeURIComponent('id[]')}=${encodeURIComponent(item)}`).join('&')
 
-    expect(url.toString()).toBe(`http://localhost/text?${params}`)
+    expect(url.toString()).toBe(`http://localhost/text?${query}`)
   })
 })

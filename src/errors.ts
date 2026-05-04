@@ -1,6 +1,6 @@
 import type { Context } from './context.js'
 import { mergeErrorStack } from './helpers.js'
-import type { Params, RequestConfig, Response } from './types.js'
+import type { RequestConfig, Response } from './types.js'
 
 interface ErrorOptions {
   message?: string
@@ -8,21 +8,17 @@ interface ErrorOptions {
   code?: string
 }
 
-const Props = ['url', 'method', 'params'] as const
+// const Props = ['url', 'method', 'params', 'query'] as const
 const HiddenProps = ['config', 'response'] as const
 
 export class RequestError extends Error {
-  /**
-   * Request config
-   */
-  config!: RequestConfig
-  /**
-   * Request object passed to fetch
-   */
-  request!: Request
-  /**
-   * Response object returned by fetch
-   */
+  /** Request config */
+  declare config: RequestConfig
+
+  /** Request object passed to fetch */
+  declare request: Request
+
+  /** Response object returned by fetch */
   response?: Response
 
   code = ''
@@ -33,25 +29,8 @@ export class RequestError extends Error {
    */
   status: number
 
-  /**
-   * Response data, if available
-   */
+  /** Response data, if available */
   data?: any
-
-  /**
-   * ID of the client that made the request
-   */
-  client?: string
-
-  /**
-   * Request URL
-   */
-  url!: string
-  /**
-   * Request method
-   */
-  method!: string
-  params?: Params
 
   constructor(context: Context, options: ErrorOptions = {}) {
     super(options.message ?? options.error?.message)
@@ -70,11 +49,10 @@ export class RequestError extends Error {
       Object.defineProperty(this, prop, { value: context[prop], enumerable: false, writable: false })
     }
 
-    for (const prop of Props) {
-      this[prop] = context.config[prop] as any
-    }
+    // for (const prop of Props) {
+    //   this[prop] = context.config[prop] as any
+    // }
 
-    context.config.id && (this.client = context.config.id)
     this.status = this.response?.status ?? -1
     options.error && (this.cause = options.error)
     this.response?.data && (this.data = this.response?.data)
@@ -85,6 +63,7 @@ export class RequestError extends Error {
       client: this.config.id,
       url: this.config.url,
       params: this.config.params,
+      query: this.config.query,
       method: this.config.method,
       message: this.message,
       code: this.code,

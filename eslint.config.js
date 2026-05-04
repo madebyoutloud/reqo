@@ -5,11 +5,8 @@ export default createConfig({
   features: {
     stylistic: true,
   },
+  style: {
+    complexity: 20,
+  },
 })
   .append({ ignores: ['docs'] })
-  .append({
-    rules: {
-      '@stylistic/newline-per-chained-call': ['error', { ignoreChainWithDepth: 2 }],
-    },
-    files: ['**/*.test.ts'],
-  })

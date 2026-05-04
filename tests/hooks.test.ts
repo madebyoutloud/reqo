@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { type Client, createClient } from '../src/index.js'
-import type { Hooks } from '../src/hooks.js'
+import type { HookList } from '../src/hooks.js'
 import { RequestError } from '../src/errors.js'
 import { catchError } from './helpers.js'
 
@@ -14,7 +14,7 @@ describe('hooks', () => {
   })
 
   it('calls request hook', async () => {
-    const onRequest: Hooks['request'] = () => {
+    const onRequest: HookList['request'] = () => {
       // ignore
     }
 
@@ -30,7 +30,7 @@ describe('hooks', () => {
     const fn = vi.fn()
     client.on('init', fn)
 
-    await catchError(client.get('/error', {}, { retry: { delay: () => 50 } }))
+    await catchError(client.get('/error', { retry: { delay: () => 50 } }))
 
     expect(fn).toBeCalledTimes(1)
   })
@@ -40,7 +40,7 @@ describe('hooks', () => {
     client.on('request', fn)
     const limit = 2
 
-    await catchError(client.get('/error', {}, {
+    await catchError(client.get('/error', {
       retry: {
         limit,
         delay: () => 50,
@@ -52,7 +52,7 @@ describe('hooks', () => {
 
   it('calls error hook', async () => {
     const message = '__TEST__'
-    const onError: Hooks['error'] = (error) => {
+    const onError: HookList['error'] = (error) => {
       error.message = message
     }
 

@@ -4,8 +4,7 @@ import type { UserRetryOptions } from './retry.js'
 
 export type ValidateFn = (response: Response) => boolean
 
-export type Params = Record<string, any>
-export type HeaderValues = Record<string, any>
+export type Values = Record<string, any>
 
 export type ResponseType = 'arrayBuffer' | 'blob' | 'json' | 'text' | 'auto'
 export type OptionalResponseType = ResponseType | false
@@ -22,13 +21,14 @@ export interface ResponseTypes<T = any> {
 
 export interface RequestOptions<
   D = any,
-  Type extends OptionalResponseType = 'auto',
+  Type extends OptionalResponseType = OptionalResponseType,
 > {
   url?: string
   method?: RequestMethod
-  params?: Params
 
-  headers?: HeaderValues
+  params?: Values
+  query?: Values
+  headers?: Values
 
   /** @default 'follow' */
   redirect?: RequestInit['redirect']
@@ -52,14 +52,13 @@ export interface RequestConfig<
   D = any,
   Type extends OptionalResponseType = any,
 > {
-  /**
-   * Descriptive name for the client, will be used in errors
-   */
+  /** Descriptive name for the client, will be used in errors */
   id?: string
 
   url: string
   method: RequestMethod
-  params: Params
+  query: Values
+  params: Values
 
   headers: Headers
 
@@ -77,14 +76,22 @@ export interface RequestConfig<
   retry?: UserRetryOptions | boolean
 }
 
+export type ResponseData<T, Type extends OptionalResponseType> = ResponseTypes<T>[
+  ResponseType extends Type ? 'auto' : Type extends false ? 'none' : Type
+]
+
 export interface Response<
   T = any,
   Type extends OptionalResponseType = any,
 > extends globalThis.Response {
-  data: ResponseTypes<T>[
-    ResponseType extends Type ? 'auto' : Type extends false ? 'none' : Type
-  ]
+  data: ResponseData<T, Type>
 }
+
+export type ResponseOrData<
+  T = any,
+  Type extends OptionalResponseType = any,
+  ReturnData extends boolean = false,
+> = ReturnData extends true ? ResponseData<T, Type> : Response<T, Type>
 
 export interface RequestState {
   /** Last error encountered during the request */
@@ -95,4 +102,16 @@ export interface RequestState {
 
 export interface ErrorRequestState extends Omit<RequestState, 'error'> {
   error: errors['RequestError']
+}
+
+export interface ClientOptions {
+  id?: string
+  fetch: (input: string | URL | Request, init?: RequestInit) => Promise<globalThis.Response>
+  redirect: RequestInit['redirect']
+  timeout: number | false
+  headers?: Values
+  url?: string
+  validate?: ValidateFn
+  retry: UserRetryOptions | boolean
+  dispatcher?: unknown
 }

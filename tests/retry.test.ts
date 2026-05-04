@@ -27,7 +27,7 @@ describe('retry', () => {
 
     const retries = 2
 
-    const [,error] = await catchError(client.get('/retry', {}, {
+    const [,error] = await catchError(client.get('/retry', {
       retry: { limit: retries, delay: () => 10 },
     }))
 
@@ -47,7 +47,7 @@ describe('retry', () => {
       }),
     )
 
-    const [,error] = await catchError(client.get('/retry', {}, {
+    const [,error] = await catchError(client.get('/retry', {
       retry: { limit: 10, delay: () => 1000 },
       timeout: 100,
     }))

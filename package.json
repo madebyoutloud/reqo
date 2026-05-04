@@ -1,7 +1,7 @@
 {
   "name": "@outloud/reqo",
   "type": "module",
-  "version": "1.1.2",
+  "version": "2.0.0-beta.0",
   "description": "HTTP client based on Fetch API with built-in support for retries, timeouts, and JSON handling.",
   "homepage": "https://reqo.byoutloud.com",
   "repository": {
@@ -46,9 +46,9 @@
     "release": "release-it"
   },
   "devDependencies": {
-    "@outloud/eslint-config": "^2.0.7",
+    "@outloud/eslint-config": "^3.0.3",
     "@types/node": "^24.10.0",
-    "eslint": "^9.39.0",
+    "eslint": "^10.2.1",
     "msw": "^2.11.6",
     "release-it": "^19.0.5",
     "tsdown": "^0.15.12",
@@ -56,6 +56,6 @@
     "vitest": "^1.5.0"
   },
   "dependencies": {
-    "@outloud/future": "^1.0.2"
+    "@outloud/future": "^2"
   }
 }

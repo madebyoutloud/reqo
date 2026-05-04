@@ -1,4 +1,4 @@
-import type { OptionalResponseType, Params, RequestConfig, RequestState, Response } from './types.js'
+import type { OptionalResponseType, Values, RequestConfig, RequestState, Response } from './types.js'
 import { responseTypes, streamTypes } from './constants.js'
 import { isFormData, isNativeClass } from './helpers.js'
 import type { errors } from './errors.js'
@@ -28,9 +28,10 @@ export class Context implements RequestState {
   }
 
   buildUrl() {
-    const url = new URL(this.config.url)
+    const urlWithParams = this.config.url.replace(/\{[\w+]\}/g, (_, name) => this.config.params[name] ?? '')
+    const url = new URL(urlWithParams)
 
-    for (const [key, value] of this.buildQuery(this.config.params)) {
+    for (const [key, value] of this.buildQuery(this.config.query)) {
       url.searchParams.append(key, value)
     }
 
@@ -88,7 +89,7 @@ export class Context implements RequestState {
 
     if (typeof body === 'object') {
       if (contentType.includes('application/x-www-form-urlencoded')) {
-        return this.buildQuery(body as Params)
+        return this.buildQuery(body as Values)
       }
 
       this.config.headers.set('content-type', 'application/json')
