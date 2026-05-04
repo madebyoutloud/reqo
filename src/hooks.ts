@@ -20,7 +20,7 @@ export interface HookList {
 }
 
 export class Hooks {
-  protected hooks: { [K in keyof HookList]?: HookList[K][] } = {}
+  protected hooks: { [K in keyof HookList]?: Hook[] } = {}
 
   on<K extends keyof HookList>(event: K, fn: HookList[K]) {
     let hooks = this.hooks[event]
