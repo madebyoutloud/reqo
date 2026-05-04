@@ -69,11 +69,16 @@ type ClientMethod<
 > = <
   Path extends PathsWithMethod<Definition, Method>,
   Type extends ResponseType = ResponseType,
-  Result = SuccessResponse<ResponseObjectMap<Definition[Path][Method]>, Media>,
 >(
   url: Path,
   options?: RequestOptions<Definition[Path][Method], Type>,
-) => Future<ResponseOrData<Result, Type, ReturnData>>
+) => Future<
+  ResponseOrData<
+    SuccessResponse<ResponseObjectMap<Definition[Path][Method]>, Media>,
+    Type,
+    ReturnData
+  >
+>
 
 export interface SchemaClient<Definition extends Record<string, any>> {
   head: ClientMethod<Definition, 'head', MediaType>

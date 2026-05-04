@@ -98,7 +98,22 @@ describe('client', () => {
     expect(error!.stack).toContain('at Client.get')
   })
 
-  it('converts params correctly', async () => {
+  it('replaces params', async () => {
+    const id = 123
+    const context = new Context({
+      url: 'http://localhost/v1/posts/{id}',
+      method: 'GET',
+      query: {},
+      params: { id },
+      headers: new Headers(),
+    })
+
+    const url = context.buildUrl()
+
+    expect(url.toString()).toBe(`http://localhost/v1/posts/${id}`)
+  })
+
+  it('converts query correctly', async () => {
     const id = [1, 2, 3]
     const context = new Context({
       url: 'http://localhost/text',

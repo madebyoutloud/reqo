@@ -28,7 +28,7 @@ export class Context implements RequestState {
   }
 
   buildUrl() {
-    const urlWithParams = this.config.url.replace(/\{[\w+]\}/g, (_, name) => this.config.params[name] ?? '')
+    const urlWithParams = this.config.url.replace(/\{(\w+)\}/g, (_, name) => this.config.params[name] ?? '')
     const url = new URL(urlWithParams)
 
     for (const [key, value] of this.buildQuery(this.config.query)) {
