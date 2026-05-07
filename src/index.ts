@@ -14,6 +14,7 @@ export type {
   RequestConfig,
   RequestOptions,
   Response,
+  ClientOptions,
 } from './types.js'
 
 export function createClient(options: Partial<ClientOptions> = {}): Client {
