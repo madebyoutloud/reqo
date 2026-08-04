@@ -1,7 +1,7 @@
 {
   "name": "@outloud/reqo",
   "type": "module",
-  "version": "2.0.0-beta.2",
+  "version": "2.0.0",
   "description": "HTTP client based on Fetch API with built-in support for retries, timeouts, and JSON handling.",
   "homepage": "https://reqo.byoutloud.com",
   "repository": {
