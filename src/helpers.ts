@@ -5,14 +5,8 @@ export function getNativeClass(value: unknown): string {
 }
 
 export function isFormData(value: unknown): value is FormData {
-  if (
-    (typeof FormData === 'function' && value instanceof FormData) ||
+  return (typeof FormData === 'function' && value instanceof FormData) ||
     getNativeClass(value) === 'FormData'
-  ) {
-    return true
-  }
-
-  return false
 }
 
 export function isNativeClass(value: unknown, className: readonly string[] | string): boolean {

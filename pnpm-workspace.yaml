@@ -2,9 +2,11 @@ packages:
   - .
   - docs
 
-onlyBuiltDependencies:
-  - '@parcel/watcher'
-  - better-sqlite3
-  - esbuild
-  - sharp
-  - vue-demi
+allowBuilds:
+  '@parcel/watcher': false
+  better-sqlite3: false
+  esbuild: false
+  msw: false
+  sharp: false
+  unrs-resolver: false
+  vue-demi: false
