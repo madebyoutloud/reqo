@@ -21,6 +21,11 @@ const handlers = [
       status: 502,
     })
   }),
+  http.all('http://localhost/*', async () => {
+    return HttpResponse.json({
+      text: 'Hello World!',
+    })
+  }),
 ]
 
 export const server = setupServer(...handlers)

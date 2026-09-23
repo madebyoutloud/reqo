@@ -7,9 +7,35 @@ variables:
 stages: [build, deploy, publish]
 
 include:
+    # test
+  - component: $OUTLOUD_CI/test-nodejs@4
+    inputs:
+      name: lint
+      command: lint
+  - component: $OUTLOUD_CI/test-nodejs@4
+    inputs:
+      name: typecheck
+      command: typecheck
+  - component: $OUTLOUD_CI/test-nodejs@4
+    inputs:
+      name: test
+      command: test
+
   - component: $OUTLOUD_CI/publish-npm@4
     inputs:
       registry: [npm, gitlab]
+
+  - component: $OUTLOUD_CI/build-nodejs@4
+    inputs:
+      script:
+        - |
+          cd docs
+          export NUXT_APP_BASE_URL=/reqo/
+          pnpm install
+          pnpm build --preset=cloudflare_module
+      outputs:
+        - docs/.output
+        - docs/.wrangler
 
   - component: $OUTLOUD_CI/deploy-cloudflare@4
     inputs:
@@ -17,9 +43,6 @@ include:
       script:
         - |
           cd docs
-          export NUXT_APP_BASE_URL=/reqo/
-          pnpm install
-          pnpm build --preset=cloudflare_module
           wrangler deploy --keep-vars --name=docs-reqo
       rules:
         - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH

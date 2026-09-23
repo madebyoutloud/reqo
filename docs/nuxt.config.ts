@@ -7,4 +7,15 @@ export default defineNuxtConfig({
   package: {
     path: '../',
   },
+
+  mcp: {
+    enabled: false,
+  },
+
+  nitro: {
+    cloudflare: {
+      deployConfig: true,
+      nodeCompat: true,
+    },
+  },
 })

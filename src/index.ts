@@ -17,6 +17,14 @@ export type {
   ClientOptions,
 } from './types.js'
 
+export type {
+  RequestOptions as SchemaRequestOptions,
+  RequestBody as SchemaRequestBody,
+  ResponseContent as SchemaResponseContent,
+  ResponseData as SchemaResponseData,
+  ErrorData as SchemaErrorData,
+} from './schema_client.js'
+
 export function createClient(options: Partial<ClientOptions> = {}): Client {
   return new Client(options)
 }
