@@ -27,6 +27,11 @@ include:
 
   - component: $OUTLOUD_CI/build-nodejs@4
     inputs:
+      rules:
+        - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+          changes:
+            - docs/**/*
+        - if: $CI_PIPELINE_SOURCE == "web" && $PIPELINE == "docs"
       script:
         - |
           cd docs
