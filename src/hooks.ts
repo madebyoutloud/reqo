@@ -1,6 +1,6 @@
 import type { MaybePromise } from '@outloud/future'
 import type { errors } from './errors.js'
-import type { RequestConfig, RequestState } from './types.js'
+import type { RequestConfig, RequestState, Response } from './types.js'
 
 export type Hook<Args extends any[] = any[], Result = any> = (...args: Args) => MaybePromise<Result>
 

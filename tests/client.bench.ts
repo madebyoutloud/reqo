@@ -23,13 +23,13 @@ describe('client', () => {
   })
 
   bench('json as text', async () => {
-    await client.get('json', {}, {
+    await client.get('json', {
       responseType: 'text',
     })
   })
 
   bench('json', async () => {
-    await client.get('json', {}, {
+    await client.get('json', {
       responseType: 'json',
     })
   })
