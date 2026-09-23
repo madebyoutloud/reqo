@@ -40,4 +40,4 @@ const event = await api.$get('/special-events/{eventId}', {
 ```
 
 ## Documentation
-To learn more, check [documentation](https://reqo.byoutloud.com/).
+To learn more, check [documentation](https://docs.outloud.dev/reqo/).
