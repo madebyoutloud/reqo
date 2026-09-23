@@ -4,7 +4,7 @@ variables:
     value: docs
     options: [publish, docs]
 
-stages: [build, deploy, publish]
+stages: [test, build, deploy, publish]
 
 include:
     # test
