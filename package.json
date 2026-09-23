@@ -6,7 +6,7 @@
   "homepage": "https://docs.outloud.dev/reqo",
   "repository": {
     "type": "git",
-    "url": "https://github.com/madebyoutloud/reqo.git"
+    "url": "git+https://github.com/madebyoutloud/reqo.git"
   },
   "license": "MIT",
   "engines": {
