@@ -1,5 +1,5 @@
 import type { Context } from './context.js'
-import { errors } from './errors.js'
+import { errors, toRequestError } from './errors.js'
 import type { ErrorRequestState, RequestMethod } from './types.js'
 
 export type DelayFn = (state: ErrorRequestState) => number
@@ -11,6 +11,8 @@ export interface RetryOptions {
   statusCodes: number[]
   codes: string[]
   delay: DelayFn
+  /** Longest delay to wait before a retry, if `delay` returns more, the last error is thrown. */
+  maxDelay?: number
   validate: ValidateFn
 }
 
@@ -70,19 +72,34 @@ export class Retry {
         }
 
         const delayMs = this.options.delay(context as ErrorRequestState)
-        const time = Date.now() + delayMs
 
-        if (context.timeoutsAt && time > context.timeoutsAt) {
+        if (this.options.maxDelay !== undefined && delayMs > this.options.maxDelay) {
           throw error
         }
 
-        await new Promise((resolve) => setTimeout(resolve, delayMs))
-
-        if (context.controller.signal.aborted) {
-          throw error
-        }
+        await this.wait(delayMs, context)
       }
     }
+  }
+
+  /** Waits before the next attempt, rejects as soon as the request is aborted. */
+  private wait(delayMs: number, context: Context) {
+    const { signal } = context.controller
+
+    return new Promise<void>((resolve, reject) => {
+      const onAbort = () => {
+        clearTimeout(timeoutId)
+        // same error as an abort during fetch
+        reject(toRequestError(context, signal.reason))
+      }
+
+      const timeoutId = setTimeout(() => {
+        signal.removeEventListener('abort', onAbort)
+        resolve()
+      }, delayMs)
+
+      signal.addEventListener('abort', onAbort, { once: true })
+    })
   }
 
   private validate(context: Context) {

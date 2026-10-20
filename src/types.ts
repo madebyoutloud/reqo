@@ -106,7 +106,8 @@ export interface ErrorRequestState extends Omit<RequestState, 'error'> {
 
 export interface ClientOptions {
   id?: string
-  fetch: (input: string | URL | Request, init?: RequestInit) => Promise<globalThis.Response>
+  /** @default globalThis.fetch, looked up on each request */
+  fetch?: (input: string | URL | Request, init?: RequestInit) => Promise<globalThis.Response>
   redirect: RequestInit['redirect']
   timeout: number | false
   headers?: Values

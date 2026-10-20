@@ -5,7 +5,7 @@ import type {
   OptionalResponseType,
   ClientOptions,
 } from './types.js'
-import { errors } from './errors.js'
+import { errors, toRequestError } from './errors.js'
 import { Context } from './context.js'
 import { Retry } from './retry.js'
 import { Hooks } from './hooks.js'
@@ -21,7 +21,6 @@ export class BaseClient extends Hooks {
     super()
 
     this.options = {
-      fetch: globalThis.fetch.bind(globalThis),
       redirect: 'follow',
       timeout: 60_000,
       retry: false,
@@ -88,8 +87,6 @@ export class BaseClient extends Hooks {
       ...rest,
     })
 
-    const timeoutId = this.timeout(context)
-
     // eslint-disable-next-line unicorn/error-message
     context.stack = new Error().stack
 
@@ -97,9 +94,6 @@ export class BaseClient extends Hooks {
       this.$request<T, Type>(context),
       () => context.controller.abort(new errors.CanceledError(context)),
     )
-      .finally(() => {
-        timeoutId && clearTimeout(timeoutId)
-      })
   }
 
   private async $request<T, Type extends OptionalResponseType>(context: Context) {
@@ -119,14 +113,10 @@ export class BaseClient extends Hooks {
       response = await executor()
     } catch (error) {
       const errorResults = await this.hook('error', error as errors['RequestError'])
-      const finalError = errorResults.reverse()
+
+      // the original error is not attached as cause, it holds request headers (credentials)
+      throw errorResults.reverse()
         .find((item) => item instanceof Error) ?? (error as Error)
-
-      if (finalError !== error && !finalError.cause) {
-        finalError.cause = error
-      }
-
-      throw finalError
     }
 
     await this.hook('response', response)
@@ -147,12 +137,29 @@ export class BaseClient extends Hooks {
 
   private async fetch<T, Type extends OptionalResponseType>(context: Context) {
     context.startAt ??= Date.now()
+    context.response = undefined
+
+    // timeout applies to each attempt, retry waits are not counted
+    const timeoutId = this.timeout(context)
+
+    try {
+      return await this.attempt<T, Type>(context)
+    } finally {
+      timeoutId && clearTimeout(timeoutId)
+    }
+  }
+
+  private async attempt<T, Type extends OptionalResponseType>(context: Context) {
     let response: Response<T, Type>
 
     await this.hook('request', context.config, context)
 
     try {
-      const originalResponse = await this.options.fetch(
+      // globalThis.fetch is looked up on each call, so a fetch replaced later (msw, instrumentation) is used,
+      // called unbound, as browsers throw "Illegal invocation" when fetch is called on another object
+      const fetch = this.options.fetch ?? globalThis.fetch
+
+      const originalResponse = await fetch(
         context.buildUrl(),
         context.buildRequest(),
       )
@@ -160,14 +167,7 @@ export class BaseClient extends Hooks {
       response = Object.assign(originalResponse, { data: undefined }) as Response<T, Type>
       context.response = response
     } catch (error) {
-      if (error instanceof errors.RequestError) {
-        throw error
-      }
-
-      throw new errors.RequestError(context, {
-        error: error as Error,
-        message: 'Request failed due to a network error.',
-      })
+      throw toRequestError(context, error)
     }
 
     try {
@@ -199,8 +199,7 @@ export class BaseClient extends Hooks {
     }
 
     return setTimeout(() => {
-      // returns last error if available, e.g. when retrying
-      context.controller.abort(context.error ?? new errors.TimeoutError(context))
+      context.controller.abort(new errors.TimeoutError(context))
     }, context.config.timeout)
   }
 

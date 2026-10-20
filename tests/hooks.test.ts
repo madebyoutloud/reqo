@@ -65,4 +65,22 @@ describe('hooks', () => {
     expect(fn).toBeCalled()
     expect(error?.message).toBe(message)
   })
+
+  it('does not attach original error as cause of replaced error', async () => {
+    client.on('error', () => new Error('mapped'))
+
+    const [,error] = await catchError(client.get('/error'))
+
+    expect(error?.message).toBe('mapped')
+    expect(error?.cause).toBeUndefined()
+  })
+
+  it('keeps cause set by error hook', async () => {
+    client.on('error', (error) => new Error('mapped', { cause: error }))
+
+    const [,error] = await catchError(client.get('/error'))
+
+    expect(error?.message).toBe('mapped')
+    expect(error?.cause).toBeInstanceOf(RequestError)
+  })
 })

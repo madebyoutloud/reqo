@@ -1,7 +1,7 @@
 import type { OptionalResponseType, Values, RequestConfig, RequestState, Response } from './types.js'
 import { responseTypes, streamTypes } from './constants.js'
 import { isFormData, isNativeClass } from './helpers.js'
-import type { errors } from './errors.js'
+import { abortError, type errors } from './errors.js'
 
 export class Context implements RequestState {
   readonly controller: AbortController
@@ -16,15 +16,15 @@ export class Context implements RequestState {
   constructor(public config: RequestConfig) {
     this.controller = new AbortController()
 
-    if (this.config.signal) {
-      this.config.signal.addEventListener('abort', () => {
-        this.controller.abort(this.config.signal?.reason)
-      })
-    }
-  }
+    const { signal } = this.config
 
-  get timeoutsAt() {
-    return this.config.timeout && this.startAt ? this.startAt + this.config.timeout : undefined
+    if (signal?.aborted) {
+      this.controller.abort(abortError(this, signal.reason))
+    } else if (signal) {
+      signal.addEventListener('abort', () => {
+        this.controller.abort(abortError(this, signal.reason))
+      }, { once: true })
+    }
   }
 
   buildUrl() {

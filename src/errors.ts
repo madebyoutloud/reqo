@@ -15,9 +15,6 @@ export class RequestError extends Error {
   /** Request config */
   declare config: RequestConfig
 
-  /** Request object passed to fetch */
-  declare request: Request
-
   /** Response object returned by fetch */
   response?: Response
 
@@ -81,6 +78,37 @@ export class TimeoutError extends RequestError {
 export class CanceledError extends RequestError {
   code = 'E_CANCELED'
   message = 'Request was canceled.'
+}
+
+/**
+ * Returns the error as is if it's a `RequestError`, otherwise wraps it,
+ * e.g. a network failure or the reason of an aborted signal.
+ */
+export function toRequestError(context: Context, error: unknown): RequestError {
+  if (error instanceof RequestError) {
+    return error
+  }
+
+  return new RequestError(context, {
+    error: error as Error,
+    message: 'Request failed due to a network error.',
+  })
+}
+
+/**
+ * Converts the reason of an aborted user signal to an error,
+ * `TimeoutError` for `AbortSignal.timeout()`, `CanceledError` otherwise.
+ */
+export function abortError(context: Context, reason: unknown): RequestError {
+  if (reason instanceof RequestError) {
+    return reason
+  }
+
+  // checks name only, DOMException is not a global in every runtime (e.g. React Native)
+  const isTimeout = (reason as Error | undefined)?.name === 'TimeoutError'
+  const ErrorClass = isTimeout ? TimeoutError : CanceledError
+
+  return new ErrorClass(context, { error: reason as Error })
 }
 
 export const errors = {
