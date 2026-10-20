@@ -77,6 +77,11 @@ export class Retry {
           throw error
         }
 
+        // the next attempt would start after totalTimeout
+        if (context.deadlineAt && Date.now() + delayMs >= context.deadlineAt) {
+          throw error
+        }
+
         await this.wait(delayMs, context)
       }
     }

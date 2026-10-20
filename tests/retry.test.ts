@@ -205,4 +205,83 @@ describe('retry', () => {
     expect((error as RequestError).status).toBe(-1)
     expect((error as RequestError).response).toBeUndefined()
   })
+
+  it('times out after totalTimeout across attempts', async () => {
+    const fn = vi.fn()
+
+    server.use(
+      http.get('http://localhost/retry', async () => {
+        fn()
+
+        if (fn.mock.calls.length === 1) {
+          return HttpResponse.json({}, { status: 503 })
+        }
+
+        await setTimeout(1000)
+
+        return HttpResponse.json({ ok: true })
+      }),
+    )
+
+    const startAt = Date.now()
+    const [,error] = await catchError(client.get('/retry', {
+      retry: { delay: () => 50 },
+      timeout: 1000,
+      totalTimeout: 200,
+    }))
+    const elapsed = Date.now() - startAt
+
+    expect(fn).toBeCalledTimes(2)
+    expect(error).toBeInstanceOf(errors.TimeoutError)
+    // keeps the error of the previous attempt
+    expect(error?.cause).toBeInstanceOf(errors.RequestError)
+    expect((error?.cause as RequestError).status).toBe(503)
+    expect(elapsed).toBeGreaterThanOrEqual(190)
+    expect(elapsed).toBeLessThan(400)
+  })
+
+  it('does not wait for a retry that would end after totalTimeout', async () => {
+    const fn = vi.fn()
+
+    server.use(
+      http.get('http://localhost/retry', () => {
+        fn()
+
+        return HttpResponse.json({}, { status: 429 })
+      }),
+    )
+
+    // client option is kept when the request passes its own retry options
+    const startAt = Date.now()
+    const [,error] = await catchError(createClient({ url: 'http://localhost', totalTimeout: 1000 })
+      .get('/retry', { retry: { delay: () => 5000 } }))
+
+    expect(fn).toBeCalledTimes(1)
+    expect(error).toBeInstanceOf(errors.RequestError)
+    expect(error).not.toBeInstanceOf(errors.TimeoutError)
+    expect((error as RequestError).status).toBe(429)
+    expect(Date.now() - startAt).toBeLessThan(100)
+  })
+
+  it('stays within totalTimeout when retries succeed', async () => {
+    const fn = vi.fn()
+
+    server.use(
+      http.get('http://localhost/retry', () => {
+        fn()
+
+        return fn.mock.calls.length === 1
+          ? HttpResponse.json({}, { status: 503 })
+          : HttpResponse.json({ ok: true })
+      }),
+    )
+
+    const data = await client.$get('/retry', {
+      retry: { delay: () => 50 },
+      totalTimeout: 1000,
+    })
+
+    expect(data).toEqual({ ok: true })
+    expect(fn).toBeCalledTimes(2)
+  })
 })

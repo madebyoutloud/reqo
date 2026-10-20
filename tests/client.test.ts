@@ -121,6 +121,13 @@ describe('client', () => {
     expect(error).toBeInstanceOf(errors.TimeoutError)
   })
 
+  it('throws timeout error after totalTimeout', async () => {
+    const [,error] = await catchError(client.get('/long', { totalTimeout: 50 }))
+
+    expect(error).toBeInstanceOf(errors.TimeoutError)
+    expect(error?.cause).toBeUndefined()
+  })
+
   it('throws timeout error', async () => {
     const [, error] = await catchError(client.get('/long', {
       timeout: 50,

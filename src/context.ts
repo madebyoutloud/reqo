@@ -10,6 +10,8 @@ export class Context implements RequestState {
   stack?: string
 
   startAt?: number
+  /** Time when `totalTimeout` passes */
+  deadlineAt?: number
   error?: errors['RequestError']
   retryCount = 0
 

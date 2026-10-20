@@ -74,6 +74,7 @@ export class BaseClient extends Hooks {
       method,
       redirect: this.options.redirect,
       timeout: this.options.timeout,
+      totalTimeout: this.options.totalTimeout,
       dispatcher: this.options.dispatcher,
       retry: typeof this.options.retry === 'object' ? { ...this.options.retry } : this.options.retry,
       responseType,
@@ -90,10 +91,15 @@ export class BaseClient extends Hooks {
     // eslint-disable-next-line unicorn/error-message
     context.stack = new Error().stack
 
+    const timeoutId = this.totalTimeout(context)
+
     return Future.withCancel(
       this.$request<T, Type>(context),
       () => context.controller.abort(new errors.CanceledError(context)),
     )
+      .finally(() => {
+        timeoutId && clearTimeout(timeoutId)
+      })
   }
 
   private async $request<T, Type extends OptionalResponseType>(context: Context) {
@@ -137,7 +143,6 @@ export class BaseClient extends Hooks {
 
   private async fetch<T, Type extends OptionalResponseType>(context: Context) {
     context.startAt ??= Date.now()
-    context.response = undefined
 
     // timeout applies to each attempt, retry waits are not counted
     const timeoutId = this.timeout(context)
@@ -146,6 +151,8 @@ export class BaseClient extends Hooks {
       return await this.attempt<T, Type>(context)
     } finally {
       timeoutId && clearTimeout(timeoutId)
+      // errors created later, e.g. during retry waits, don't get the response of this attempt
+      context.response = undefined
     }
   }
 
@@ -201,6 +208,19 @@ export class BaseClient extends Hooks {
     return setTimeout(() => {
       context.controller.abort(new errors.TimeoutError(context))
     }, context.config.timeout)
+  }
+
+  private totalTimeout(context: Context) {
+    if (!context.config.totalTimeout) {
+      return
+    }
+
+    context.deadlineAt = Date.now() + context.config.totalTimeout
+
+    return setTimeout(() => {
+      // keeps the error of the previous attempt, if any
+      context.controller.abort(new errors.TimeoutError(context, { error: context.error }))
+    }, context.config.totalTimeout)
   }
 
   private processResponse(response: globalThis.Response, type: OptionalResponseType) {

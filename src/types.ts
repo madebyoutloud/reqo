@@ -41,8 +41,10 @@ export interface RequestOptions<
   data?: D
   /** @default 'auto' */
   responseType?: Type
-  /** @default 60000 */
+  /** Timeout of each attempt in milliseconds. @default 60000 */
   timeout?: number | false
+  /** Timeout of the whole request in milliseconds, including retries and waits between them. @default false */
+  totalTimeout?: number | false
 
   /** @default false */
   retry?: UserRetryOptions | boolean
@@ -72,6 +74,7 @@ export interface RequestConfig<
   data?: D
   responseType?: Type
   timeout?: number | false
+  totalTimeout?: number | false
 
   retry?: UserRetryOptions | boolean
 }
@@ -110,6 +113,7 @@ export interface ClientOptions {
   fetch?: (input: string | URL | Request, init?: RequestInit) => Promise<globalThis.Response>
   redirect: RequestInit['redirect']
   timeout: number | false
+  totalTimeout?: number | false
   headers?: Values
   url?: string
   validate?: ValidateFn
