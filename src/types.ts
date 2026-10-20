@@ -105,6 +105,8 @@ export interface RequestState {
 
 export interface ErrorRequestState extends Omit<RequestState, 'error'> {
   error: errors['RequestError']
+  /** Delay in milliseconds from the `Retry-After` header of the error response, if valid */
+  retryAfter?: number
 }
 
 export interface ClientOptions {

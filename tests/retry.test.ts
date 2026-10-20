@@ -3,6 +3,7 @@ import { setTimeout } from 'node:timers/promises'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { type Client, createClient, errors } from '../src/index.js'
+import { parseRetryAfter } from '../src/retry.js'
 import type { RequestError } from '../src/errors.js'
 import type { ErrorRequestState } from '../src/types.js'
 import { catchError } from './helpers.js'
@@ -283,5 +284,119 @@ describe('retry', () => {
 
     expect(data).toEqual({ ok: true })
     expect(fn).toBeCalledTimes(2)
+  })
+
+  it('passes Retry-After to delay and validate as retryAfter', async () => {
+    const fn = vi.fn()
+    const delay = vi.fn((state: ErrorRequestState) => state.retryAfter ?? 0)
+    const validate = vi.fn((state: ErrorRequestState) => state.retryAfter !== undefined)
+
+    server.use(
+      http.get('http://localhost/retry', () => {
+        fn()
+
+        return fn.mock.calls.length === 1
+          ? HttpResponse.json({}, { status: 500, headers: { 'Retry-After': '0' } })
+          : HttpResponse.json({}, { status: 500 })
+      }),
+    )
+
+    await catchError(client.get('/retry', { retry: { delay, validate } }))
+
+    expect(fn).toBeCalledTimes(2)
+    expect(delay).toHaveReturnedWith(0)
+    expect(validate.mock.results.map((result) => result.value)).toEqual([true, false])
+  })
+
+  it('waits for Retry-After by default', async () => {
+    const fn = vi.fn()
+
+    server.use(
+      http.get('http://localhost/retry', () => {
+        fn()
+
+        return fn.mock.calls.length === 1
+          ? HttpResponse.json({}, { status: 429, headers: { 'Retry-After': '1' } })
+          : HttpResponse.json({ ok: true })
+      }),
+    )
+
+    const startAt = Date.now()
+    const data = await client.$get('/retry', { retry: true })
+
+    expect(data).toEqual({ ok: true })
+    expect(fn).toBeCalledTimes(2)
+    expect(Date.now() - startAt).toBeGreaterThanOrEqual(1000)
+  })
+
+  it('ignores Retry-After for other status codes by default', async () => {
+    const fn = vi.fn()
+
+    server.use(
+      http.get('http://localhost/retry', () => {
+        fn()
+
+        return fn.mock.calls.length === 1
+          ? HttpResponse.json({}, { status: 500, headers: { 'Retry-After': '10' } })
+          : HttpResponse.json({ ok: true })
+      }),
+    )
+
+    const startAt = Date.now()
+    const data = await client.$get('/retry', { retry: true })
+
+    expect(data).toEqual({ ok: true })
+    expect(Date.now() - startAt).toBeLessThan(1000)
+  })
+
+  it('gives up when Retry-After exceeds default maxDelay', async () => {
+    const fn = vi.fn()
+
+    server.use(
+      http.get('http://localhost/retry', () => {
+        fn()
+
+        return HttpResponse.json({}, { status: 429, headers: { 'Retry-After': '120' } })
+      }),
+    )
+
+    const startAt = Date.now()
+    const [,error] = await catchError(client.get('/retry', { retry: true }))
+
+    expect(fn).toBeCalledTimes(1)
+    expect((error as RequestError).status).toBe(429)
+    expect(Date.now() - startAt).toBeLessThan(100)
+  })
+})
+
+describe('parseRetryAfter', () => {
+  const response = (value?: string) => new Response(null, {
+    headers: value === undefined ? {} : { 'Retry-After': value },
+  })
+
+  it('parses seconds', () => {
+    expect(parseRetryAfter(response('120'))).toBe(120_000)
+    expect(parseRetryAfter(response('0'))).toBe(0)
+  })
+
+  it('parses HTTP date', () => {
+    const date = new Date(Date.now() + 60_000).toUTCString()
+    const delay = parseRetryAfter(response(date))!
+
+    // HTTP dates have second precision
+    expect(delay).toBeGreaterThan(58_000)
+    expect(delay).toBeLessThanOrEqual(60_000)
+  })
+
+  it('returns 0 for a date in the past', () => {
+    expect(parseRetryAfter(response(new Date(Date.now() - 60_000).toUTCString()))).toBe(0)
+  })
+
+  it('returns undefined for missing or invalid values', () => {
+    expect(parseRetryAfter(undefined)).toBeUndefined()
+    expect(parseRetryAfter(response())).toBeUndefined()
+    expect(parseRetryAfter(response('soon'))).toBeUndefined()
+    expect(parseRetryAfter(response('-1'))).toBeUndefined()
+    expect(parseRetryAfter(response('1.5'))).toBeUndefined()
   })
 })

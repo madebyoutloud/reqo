@@ -11,15 +11,49 @@ export interface RetryOptions {
   statusCodes: number[]
   codes: string[]
   delay: DelayFn
-  /** Longest delay to wait before a retry, if `delay` returns more, the last error is thrown. */
+  /**
+   * Longest delay to wait before a retry, if `delay` returns more, the last error is thrown.
+   * @default 60000
+   */
   maxDelay?: number
   validate: ValidateFn
 }
 
 export interface UserRetryOptions extends Partial<RetryOptions> {}
 
-// TODO: handle retry-after header
-const delay: DelayFn = ({ retryCount }) => {
+/** Status codes for which the default delay uses the `Retry-After` header */
+const retryAfterStatusCodes = [413, 429, 503]
+
+/**
+ * Returns the delay in milliseconds from the `Retry-After` header, in seconds or as an HTTP date,
+ * or `undefined` if the header is missing or invalid.
+ */
+export function parseRetryAfter(response?: globalThis.Response): number | undefined {
+  const value = response?.headers.get('retry-after')?.trim()
+
+  if (!value) {
+    return
+  }
+
+  if (/^\d+$/.test(value)) {
+    return Number(value) * 1000
+  }
+
+  // HTTP dates contain day and month names, Date.parse accepts plain numbers too
+  const date = /[a-z]/i.test(value) ? Date.parse(value) : Number.NaN
+
+  if (Number.isNaN(date)) {
+    return
+  }
+
+  return Math.max(0, date - Date.now())
+}
+
+const delay: DelayFn = ({ retryCount, error, retryAfter }) => {
+  if (retryAfter !== undefined && retryAfterStatusCodes.includes(error.status)) {
+    return retryAfter
+  }
+
   return 0.1 * (2 ** (retryCount - 1)) * 1000
 }
 
@@ -43,6 +77,7 @@ const defaultOptions: RetryOptions = {
   statusCodes: [408, 429, 500, 502, 503, 504, 520, 521, 522, 523, 524, 525, 526, 530],
   codes: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND', 'ECONNREFUSED', 'UND_ERR_SOCKET'],
   delay,
+  maxDelay: 60_000,
   validate,
 }
 
@@ -63,6 +98,7 @@ export class Retry {
       } catch (error) {
         context.error = error as errors['RequestError']
         context.retryCount++
+        context.retryAfter = error instanceof errors.RequestError ? parseRetryAfter(error.response) : undefined
 
         if (!(error instanceof errors.RequestError) ||
           context.controller.signal.aborted ||

@@ -14,6 +14,7 @@ export class Context implements RequestState {
   deadlineAt?: number
   error?: errors['RequestError']
   retryCount = 0
+  retryAfter?: number
 
   constructor(public config: RequestConfig) {
     this.controller = new AbortController()
