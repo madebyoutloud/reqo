@@ -163,6 +163,32 @@ describe('retry', () => {
     expect(error?.cause).toBe(controller.signal.reason)
   })
 
+  it('stops waiting when client signal is aborted', async () => {
+    server.use(
+      http.get('http://localhost/retry', () => HttpResponse.json({}, { status: 429 })),
+    )
+
+    const controller = new AbortController()
+    const signalClient = createClient({
+      url: 'http://localhost',
+      retry: { delay: () => 5000 },
+      signal: controller.signal,
+    })
+    const request = signalClient.get('/retry')
+
+    let abortedAt = 0
+    globalThis.setTimeout(() => {
+      abortedAt = Date.now()
+      controller.abort()
+    }, 50)
+
+    const [,error] = await catchError(request)
+
+    expect(Date.now() - abortedAt).toBeLessThan(100)
+    expect(error).toBeInstanceOf(errors.CanceledError)
+    expect(error?.cause).toBe(controller.signal.reason)
+  })
+
   it('stops waiting when request is canceled', async () => {
     server.use(
       http.get('http://localhost/retry', () => HttpResponse.json({}, { status: 429 })),

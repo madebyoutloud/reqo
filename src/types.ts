@@ -121,4 +121,6 @@ export interface ClientOptions {
   validate?: ValidateFn
   retry: UserRetryOptions | boolean
   dispatcher?: unknown
+  /** Signal for every request of the client, combined with the signal of a request, either aborts it */
+  signal?: AbortSignal
 }

@@ -16,6 +16,8 @@ export class Context implements RequestState {
   retryCount = 0
   retryAfter?: number
 
+  private onAbort?: () => void
+
   constructor(public config: RequestConfig) {
     this.controller = new AbortController()
 
@@ -24,9 +26,19 @@ export class Context implements RequestState {
     if (signal?.aborted) {
       this.controller.abort(abortError(this, signal.reason))
     } else if (signal) {
-      signal.addEventListener('abort', () => {
+      this.onAbort = () => {
         this.controller.abort(abortError(this, signal.reason))
-      }, { once: true })
+      }
+
+      signal.addEventListener('abort', this.onAbort, { once: true })
+    }
+  }
+
+  /** Stops listening to the signal, a client signal outlives its requests. */
+  dispose() {
+    if (this.onAbort) {
+      this.config.signal?.removeEventListener('abort', this.onAbort)
+      this.onAbort = undefined
     }
   }
 

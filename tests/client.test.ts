@@ -224,3 +224,66 @@ describe('client', () => {
     expect(url.toString()).toBe(`http://localhost/text?${query}`)
   })
 })
+
+describe('client signal', () => {
+  it('throws canceled error when client signal aborts', async () => {
+    const controller = new AbortController()
+    const signalClient = createClient({ url: 'http://localhost', signal: controller.signal })
+    const request = signalClient.get('/long')
+
+    globalThis.setTimeout(() => controller.abort(), 20)
+
+    const [,error] = await catchError(request)
+
+    expect(error).toBeInstanceOf(errors.CanceledError)
+    expect(error?.cause).toBe(controller.signal.reason)
+  })
+
+  it('does not send request when client signal is already aborted', async () => {
+    const fetch = vi.fn(async () => Response.json({}))
+    const reason = new Error('stop')
+    const signalClient = createClient({ url: 'http://localhost', fetch, signal: AbortSignal.abort(reason) })
+
+    const [,error] = await catchError(signalClient.get('/json'))
+
+    expect(fetch).not.toBeCalled()
+    expect(error).toBeInstanceOf(errors.CanceledError)
+    expect(error?.cause).toBe(reason)
+  })
+
+  it('throws timeout error when client signal times out', async () => {
+    const signal = AbortSignal.timeout(20)
+    const [,error] = await catchError(createClient({ url: 'http://localhost', signal }).get('/long'))
+
+    expect(error).toBeInstanceOf(errors.TimeoutError)
+    expect(error?.cause).toBe(signal.reason)
+  })
+
+  it.each(['client', 'request'] as const)('combines client and request signals, %s signal aborts', async (source) => {
+    const clientController = new AbortController()
+    const requestController = new AbortController()
+    const signalClient = createClient({ url: 'http://localhost', signal: clientController.signal })
+    const request = signalClient.get('/long', { signal: requestController.signal })
+    const controller = source === 'client' ? clientController : requestController
+
+    globalThis.setTimeout(() => controller.abort(), 20)
+
+    const [,error] = await catchError(request)
+
+    expect(error).toBeInstanceOf(errors.CanceledError)
+    expect(error?.cause).toBe(controller.signal.reason)
+  })
+
+  it('removes client signal listener when request ends', async () => {
+    const controller = new AbortController()
+    const add = vi.spyOn(controller.signal, 'addEventListener')
+    const remove = vi.spyOn(controller.signal, 'removeEventListener')
+    const signalClient = createClient({ url: 'http://localhost', signal: controller.signal })
+
+    await signalClient.get('/json')
+    await catchError(signalClient.get('/error'))
+
+    expect(add).toBeCalledTimes(2)
+    expect(remove.mock.calls).toEqual(add.mock.calls.map(([type, listener]) => [type, listener]))
+  })
+})

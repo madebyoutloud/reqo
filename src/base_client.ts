@@ -66,6 +66,7 @@ export class BaseClient extends Hooks {
       headers,
       query,
       params,
+      signal,
       ...rest
     } = options
 
@@ -85,6 +86,7 @@ export class BaseClient extends Hooks {
         ...this.options.headers,
         ...headers,
       }),
+      signal: this.signal(signal),
       ...rest,
     })
 
@@ -99,7 +101,19 @@ export class BaseClient extends Hooks {
     )
       .finally(() => {
         timeoutId && clearTimeout(timeoutId)
+        context.dispose()
       })
+  }
+
+  /** Combines the client signal with the request signal, either aborts the request. */
+  private signal(signal?: AbortSignal) {
+    const clientSignal = this.options.signal
+
+    if (!clientSignal || !signal || clientSignal === signal) {
+      return signal ?? clientSignal
+    }
+
+    return AbortSignal.any([clientSignal, signal])
   }
 
   private async $request<T, Type extends OptionalResponseType>(context: Context) {
@@ -165,6 +179,9 @@ export class BaseClient extends Hooks {
       // globalThis.fetch is looked up on each call, so a fetch replaced later (msw, instrumentation) is used,
       // called unbound, as browsers throw "Illegal invocation" when fetch is called on another object
       const fetch = this.options.fetch ?? globalThis.fetch
+
+      // an aborted request is not sent, also with a custom fetch that ignores the signal
+      context.controller.signal.throwIfAborted()
 
       const originalResponse = await fetch(
         context.buildUrl(),
