@@ -393,6 +393,19 @@ describe('retry', () => {
     expect((error as RequestError).status).toBe(429)
     expect(Date.now() - startAt).toBeLessThan(100)
   })
+
+  it('takes the network error code from the cause', async () => {
+    // same shape as undici, the code is on the cause of `TypeError: fetch failed`
+    const socketError = Object.assign(new Error('other side closed'), { code: 'UND_ERR_SOCKET' })
+    const fetch = vi.fn(() => Promise.reject(new TypeError('fetch failed', { cause: socketError })))
+
+    const [,error] = await catchError(createClient({ url: 'http://localhost', fetch }).get('/retry', {
+      retry: { delay: () => 10 },
+    }))
+
+    expect((error as RequestError).code).toBe('UND_ERR_SOCKET')
+    expect(fetch).toBeCalledTimes(3)
+  })
 })
 
 describe('parseRetryAfter', () => {
