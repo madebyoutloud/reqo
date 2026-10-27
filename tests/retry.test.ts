@@ -395,6 +395,56 @@ describe('retry', () => {
   })
 })
 
+describe('network error code', () => {
+  // same shape as undici, the code is on the cause of `TypeError: fetch failed`
+  function networkFailure(code?: string) {
+    const cause = Object.assign(new Error('other side closed'), code ? { code } : {})
+
+    return vi.fn(() => Promise.reject(new TypeError('fetch failed', { cause })))
+  }
+
+  it('retries a network error with the code on the cause', async () => {
+    const fetch = networkFailure('UND_ERR_SOCKET')
+
+    const [, error] = await catchError(createClient({ url: 'http://localhost', fetch }).get('/retry', {
+      retry: { delay: () => 10 },
+    }))
+
+    expect((error as RequestError).code).toBe('UND_ERR_SOCKET')
+    expect(fetch).toBeCalledTimes(3)
+  })
+
+  it('takes the code from a nested cause', async () => {
+    const cause = Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' })
+    const fetch = vi.fn(() => Promise.reject(new TypeError('fetch failed', { cause: new Error('wrapper', { cause }) })))
+
+    const [, error] = await catchError(createClient({ url: 'http://localhost', fetch }).get('/retry'))
+
+    expect((error as RequestError).code).toBe('ECONNREFUSED')
+  })
+
+  it('does not retry a network error without a code', async () => {
+    const fetch = networkFailure()
+
+    const [, error] = await catchError(createClient({ url: 'http://localhost', fetch }).get('/retry', {
+      retry: { delay: () => 10 },
+    }))
+
+    expect((error as RequestError).code).toBe('')
+    expect(fetch).toBeCalledTimes(1)
+  })
+
+  it('does not retry a network error with the code on a non retried method', async () => {
+    const fetch = networkFailure('UND_ERR_SOCKET')
+
+    await catchError(createClient({ url: 'http://localhost', fetch }).post('/retry', {
+      retry: { delay: () => 10 },
+    }))
+
+    expect(fetch).toBeCalledTimes(1)
+  })
+})
+
 describe('parseRetryAfter', () => {
   const response = (value?: string) => new Response(null, {
     headers: value === undefined ? {} : { 'Retry-After': value },
