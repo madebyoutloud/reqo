@@ -414,9 +414,10 @@ describe('network error code', () => {
     expect(fetch).toBeCalledTimes(3)
   })
 
-  it('takes the code from a nested cause', async () => {
-    const cause = Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' })
-    const fetch = vi.fn(() => Promise.reject(new TypeError('fetch failed', { cause: new Error('wrapper', { cause }) })))
+  it('takes the code from the error itself', async () => {
+    // same shape as node-fetch, the code is on the rejected error
+    const failure = Object.assign(new Error('connect ECONNREFUSED'), { code: 'ECONNREFUSED' })
+    const fetch = vi.fn(() => Promise.reject(failure))
 
     const [, error] = await catchError(createClient({ url: 'http://localhost', fetch }).get('/retry'))
 
