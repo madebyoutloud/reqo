@@ -11,6 +11,31 @@ interface ErrorOptions {
 // const Props = ['url', 'method', 'params', 'query'] as const
 const HiddenProps = ['config', 'response'] as const
 
+/** Limits the walk through the cause chain, it can be circular */
+const MAX_CAUSE_DEPTH = 5
+
+/**
+ * Returns the first error code in the cause chain, fetch rejects network failures
+ * with `TypeError: fetch failed` and puts the code (e.g. `UND_ERR_SOCKET`) on its cause.
+ */
+function findErrorCode(error: unknown): string | undefined {
+  let current = error
+
+  for (let depth = 0; depth < MAX_CAUSE_DEPTH; depth++) {
+    if (!(current instanceof Error)) {
+      return
+    }
+
+    const code = (current as Error & { code?: unknown }).code
+
+    if (typeof code === 'string' && code) {
+      return code
+    }
+
+    current = current.cause
+  }
+}
+
 export class RequestError extends Error {
   /** Request config */
   declare config: RequestConfig
@@ -36,11 +61,7 @@ export class RequestError extends Error {
       mergeErrorStack(this, context.stack)
     }
 
-    if (options.code) {
-      this.code = options.code
-    } else if (options.error && 'code' in options.error && typeof options.error.code === 'string') {
-      this.code = options.error.code
-    }
+    this.code = options.code || findErrorCode(options.error) || ''
 
     for (const prop of HiddenProps) {
       Object.defineProperty(this, prop, { value: context[prop], enumerable: false, writable: false })
