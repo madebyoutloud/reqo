@@ -1,6 +1,6 @@
 ---
 name: use-outloud-reqo
-description: Read BEFORE adding or changing HTTP requests made with @outloud/reqo, or creating its client. Covers the shared client, request options, path and query parameters, errors, retries, timeouts and cancellation.
+description: Read BEFORE adding or changing HTTP requests or API calls, or creating an HTTP client. Covers @outloud/reqo's shared client, request options, path and query parameters, errors, retries, timeouts and cancellation.
 ---
 
 # @outloud/reqo
