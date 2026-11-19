@@ -107,9 +107,14 @@ export interface RequestState {
   error?: errors['RequestError']
   /** Number of retry attempts made */
   retryCount: number
+  /**
+   * Aborted when the request is canceled, passes `totalTimeout`, or the signal of the request or client aborts.
+   * A hook that waits, e.g. in a rate limit queue, should stop waiting and reject when it aborts.
+   */
+  readonly signal: AbortSignal
 }
 
-export interface ErrorRequestState extends Omit<RequestState, 'error'> {
+export interface ErrorRequestState extends Omit<RequestState, 'error' | 'signal'> {
   error: errors['RequestError']
   /** Delay in milliseconds from the `Retry-After` header of the error response, if valid */
   retryAfter?: number

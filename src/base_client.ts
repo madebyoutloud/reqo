@@ -157,7 +157,9 @@ export class BaseClient extends Hooks {
   private async fetch<T, Type extends OptionalResponseType>(context: Context) {
     context.attempts++
 
-    // timeout applies to each attempt, retry waits are not counted,
+    await this.requestHook(context)
+
+    // timeout applies to each attempt, retry waits and request hooks (e.g. a rate limit queue) are not counted,
     // it aborts only this attempt, so the request isn't aborted and the attempt can be retried
     const { timeout } = context.config
     const signal = timeout ? AbortSignal.any([context.signal, AbortSignal.timeout(timeout)]) : context.signal
@@ -170,10 +172,21 @@ export class BaseClient extends Hooks {
     }
   }
 
+  /** Runs the request hooks, a hook that fails because the request was aborted rejects with the abort error */
+  private async requestHook(context: Context) {
+    try {
+      await this.hook('request', context.config, context)
+    } catch (error) {
+      if (context.signal.aborted) {
+        throw abortError(context, context.signal.reason)
+      }
+
+      throw error
+    }
+  }
+
   private async attempt<T, Type extends OptionalResponseType>(context: Context, signal: AbortSignal) {
     let response: Response<T, Type>
-
-    await this.hook('request', context.config, context)
 
     const [url, init] = this.build(context, signal)
 
