@@ -8,17 +8,21 @@ function queuePlugin() {
   const waiting: (() => void)[] = []
 
   const plugin: Plugin = (client) => {
-    client.on('request', (_config, state) => new Promise<void>((resolve, reject) => {
-      state.signal.throwIfAborted()
+    client.on(
+      'request',
+      (_config, state) =>
+        new Promise<void>((resolve, reject) => {
+          state.signal.throwIfAborted()
 
-      const onAbort = () => reject(state.signal.reason)
+          const onAbort = () => reject(state.signal.reason)
 
-      state.signal.addEventListener('abort', onAbort, { once: true })
-      waiting.push(() => {
-        state.signal.removeEventListener('abort', onAbort)
-        resolve()
-      })
-    }))
+          state.signal.addEventListener('abort', onAbort, { once: true })
+          waiting.push(() => {
+            state.signal.removeEventListener('abort', onAbort)
+            resolve()
+          })
+        }),
+    )
   }
 
   return { plugin, waiting, release: () => waiting.shift()?.() }
@@ -73,7 +77,11 @@ describe('queue plugins', () => {
   it('maps an abort by the request signal while waiting to CanceledError', async () => {
     const queue = queuePlugin()
     const controller = new AbortController()
-    const client = createClient({ url: 'http://localhost', fetch: async () => Response.json({}), plugins: [queue.plugin] })
+    const client = createClient({
+      url: 'http://localhost',
+      fetch: async () => Response.json({}),
+      plugins: [queue.plugin],
+    })
 
     const request = client.$get('/x', { signal: controller.signal })
 

@@ -17,9 +17,12 @@ const handlers = [
     return HttpResponse.json({ status: true })
   }),
   http.get('http://localhost/error', async () => {
-    return HttpResponse.json({ error: { message: 'Unknown error' } }, {
-      status: 502,
-    })
+    return HttpResponse.json(
+      { error: { message: 'Unknown error' } },
+      {
+        status: 502,
+      },
+    )
   }),
   http.all('http://localhost/*', async () => {
     return HttpResponse.json({

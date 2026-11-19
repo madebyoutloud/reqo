@@ -60,8 +60,7 @@ describe('typed client', () => {
   })
 
   it('accepts only paths of the method', () => {
-    expectTypeOf(api.$post).parameter(0)
-      .toEqualTypeOf<'/special-events' | '/tickets'>()
+    expectTypeOf(api.$post).parameter(0).toEqualTypeOf<'/special-events' | '/tickets'>()
 
     // @ts-expect-error unknown path
     api.$get('/unknown').catch(ignore)
@@ -78,8 +77,7 @@ describe('typed client', () => {
     api.$post('/tickets').catch(ignore)
 
     api.$get('/special-events/{eventId}', { params: { eventId: '1' } }).catch(ignore)
-    api.$post('/tickets', { data: { ticketType: 'general', ticketDate: '2024-01-01', email: 'a@b.com' } })
-      .catch(ignore)
+    api.$post('/tickets', { data: { ticketType: 'general', ticketDate: '2024-01-01', email: 'a@b.com' } }).catch(ignore)
   })
 
   it('forbids params, query and data the operation does not define', () => {
@@ -99,7 +97,8 @@ describe('typed client', () => {
 
   it('infers the response data', () => {
     expectTypeOf(api.$get('/museum-hours')).toEqualTypeOf<RequestPromise<components['schemas']['MuseumHours']>>()
-    expectTypeOf(api.get('/museum-hours')).resolves.toHaveProperty('data')
+    expectTypeOf(api.get('/museum-hours'))
+      .resolves.toHaveProperty('data')
       .toEqualTypeOf<components['schemas']['MuseumHours']>()
     expectTypeOf(api.$get('/museum-hours', { responseType: 'text' })).toEqualTypeOf<RequestPromise<string>>()
   })
@@ -169,9 +168,9 @@ describe('plugins', () => {
   it('accepts plugins on any client and returns it', () => {
     expectTypeOf(createClient().use(auth)).toEqualTypeOf<Client>()
     expectTypeOf(createClient<paths>().use(auth)).toEqualTypeOf<Client<paths>>()
-    expectTypeOf(new (class extends Client<paths> {})({ url: 'http://localhost', fetch }).use(auth)
-      .$get('/museum-hours'))
-      .toEqualTypeOf<RequestPromise<components['schemas']['MuseumHours']>>()
+    expectTypeOf(
+      new (class extends Client<paths> {})({ url: 'http://localhost', fetch }).use(auth).$get('/museum-hours'),
+    ).toEqualTypeOf<RequestPromise<components['schemas']['MuseumHours']>>()
 
     createClient({ plugins: [auth] })
   })

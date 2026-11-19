@@ -18,8 +18,7 @@ class Storage {
   }
 
   key(i: number) {
-    return this.items.keys()
-      .toArray()[i] ?? null
+    return this.items.keys().toArray()[i] ?? null
   }
 
   clear() {

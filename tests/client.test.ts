@@ -1,10 +1,10 @@
 import { inspect } from 'node:util'
 import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest'
-import { createClient, errors } from '../src/index.js'
-import type { RequestError } from '../src/errors.js'
-import { Context } from '../src/context.js'
-import { Headers } from '../src/headers.js'
 import type { Client } from '../src/client.js'
+import { Context } from '../src/context.js'
+import type { RequestError } from '../src/errors.js'
+import { Headers } from '../src/headers.js'
+import { createClient, errors } from '../src/index.js'
 import { catchError } from './helpers.js'
 
 let client: Client
@@ -73,7 +73,7 @@ describe('client', () => {
 
     request.cancel()
 
-    const [,error] = await catchError(request)
+    const [, error] = await catchError(request)
 
     expect(error).toBeInstanceOf(errors.CanceledError)
     expect(error).toMatchObject({
@@ -88,7 +88,7 @@ describe('client', () => {
 
     globalThis.setTimeout(() => controller.abort(), 20)
 
-    const [,error] = await catchError(request)
+    const [, error] = await catchError(request)
 
     expect(error).toBeInstanceOf(errors.CanceledError)
     expect(error).toMatchObject({ code: 'E_CANCELED', message: 'Request was canceled.' })
@@ -97,7 +97,7 @@ describe('client', () => {
 
   it('throws canceled error when signal is already aborted', async () => {
     const reason = new Error('stop')
-    const [,error] = await catchError(client.get('/json', { signal: AbortSignal.abort(reason) }))
+    const [, error] = await catchError(client.get('/json', { signal: AbortSignal.abort(reason) }))
 
     expect(error).toBeInstanceOf(errors.CanceledError)
     expect(error?.cause).toBe(reason)
@@ -105,7 +105,7 @@ describe('client', () => {
 
   it('throws timeout error when signal times out', async () => {
     const signal = AbortSignal.timeout(20)
-    const [,error] = await catchError(client.get('/long', { signal }))
+    const [, error] = await catchError(client.get('/long', { signal }))
 
     expect(error).toBeInstanceOf(errors.TimeoutError)
     expect(error).toMatchObject({ code: 'E_TIMEOUT', message: 'Request timed out.' })
@@ -115,22 +115,24 @@ describe('client', () => {
   it('throws timeout error when signal times out without DOMException global', async () => {
     vi.stubGlobal('DOMException', undefined)
 
-    const [,error] = await catchError(client.get('/long', { signal: AbortSignal.timeout(20) }))
+    const [, error] = await catchError(client.get('/long', { signal: AbortSignal.timeout(20) }))
 
     expect(error).toBeInstanceOf(errors.TimeoutError)
   })
 
   it('throws timeout error after totalTimeout', async () => {
-    const [,error] = await catchError(client.get('/long', { totalTimeout: 50 }))
+    const [, error] = await catchError(client.get('/long', { totalTimeout: 50 }))
 
     expect(error).toBeInstanceOf(errors.TimeoutError)
     expect(error?.cause).toBeUndefined()
   })
 
   it('throws timeout error', async () => {
-    const [, error] = await catchError(client.get('/long', {
-      timeout: 50,
-    }))
+    const [, error] = await catchError(
+      client.get('/long', {
+        timeout: 50,
+      }),
+    )
 
     expect(error).toBeInstanceOf(errors.TimeoutError)
 
@@ -141,7 +143,7 @@ describe('client', () => {
   })
 
   it('throws request error', async () => {
-    const [,error] = await catchError(client.get('/error'))
+    const [, error] = await catchError(client.get('/error'))
 
     expect(error).toBeInstanceOf(errors.RequestError)
     expect(error).toMatchObject({
@@ -151,7 +153,7 @@ describe('client', () => {
   })
 
   it('serializes error', async () => {
-    const [,error] = await catchError(client.get('/error', { query: { test: 1 } }))
+    const [, error] = await catchError(client.get('/error', { query: { test: 1 } }))
     const json = (error as RequestError).toJSON()
 
     expect(json).toEqual({
@@ -176,7 +178,7 @@ describe('client', () => {
       catchError(client.get('/long', { headers: { Authorization: secret }, timeout: 20 })),
     ])
 
-    for (const [,error] of errorsToCheck) {
+    for (const [, error] of errorsToCheck) {
       expect(error).toBeInstanceOf(errors.RequestError)
       expect((error as RequestError).config.headers.get('authorization')).toBe(secret)
       expect(JSON.stringify(error)).not.toContain('__SECRET_TOKEN__')
@@ -185,7 +187,7 @@ describe('client', () => {
   })
 
   it('captures stack trace', async () => {
-    const [,error] = await catchError(client.get('/error', {}))
+    const [, error] = await catchError(client.get('/error', {}))
 
     expect(error).toBeInstanceOf(errors.RequestError)
     expect(error!.stack).not.toContain('at Client.fetch')
@@ -234,7 +236,7 @@ describe('client signal', () => {
 
     globalThis.setTimeout(() => controller.abort(), 20)
 
-    const [,error] = await catchError(request)
+    const [, error] = await catchError(request)
 
     expect(error).toBeInstanceOf(errors.CanceledError)
     expect(error?.cause).toBe(controller.signal.reason)
@@ -245,7 +247,7 @@ describe('client signal', () => {
     const reason = new Error('stop')
     const signalClient = createClient({ url: 'http://localhost', fetch, signal: AbortSignal.abort(reason) })
 
-    const [,error] = await catchError(signalClient.get('/json'))
+    const [, error] = await catchError(signalClient.get('/json'))
 
     expect(fetch).not.toBeCalled()
     expect(error).toBeInstanceOf(errors.CanceledError)
@@ -254,7 +256,7 @@ describe('client signal', () => {
 
   it('throws timeout error when client signal times out', async () => {
     const signal = AbortSignal.timeout(20)
-    const [,error] = await catchError(createClient({ url: 'http://localhost', signal }).get('/long'))
+    const [, error] = await catchError(createClient({ url: 'http://localhost', signal }).get('/long'))
 
     expect(error).toBeInstanceOf(errors.TimeoutError)
     expect(error?.cause).toBe(signal.reason)
@@ -269,7 +271,7 @@ describe('client signal', () => {
 
     globalThis.setTimeout(() => controller.abort(), 20)
 
-    const [,error] = await catchError(request)
+    const [, error] = await catchError(request)
 
     expect(error).toBeInstanceOf(errors.CanceledError)
     expect(error?.cause).toBe(controller.signal.reason)
@@ -302,9 +304,11 @@ describe('path params', () => {
   it.each([undefined, null, ''])('throws before sending when a param is %o', async (id) => {
     const fetch = vi.fn(async () => Response.json({}))
 
-    const [, error] = await catchError(createClient({ url: 'http://localhost', fetch }).delete('/users/{id}', {
-      params: { id },
-    }))
+    const [, error] = await catchError(
+      createClient({ url: 'http://localhost', fetch }).delete('/users/{id}', {
+        params: { id },
+      }),
+    )
 
     expect(error).toBeInstanceOf(errors.RequestError)
     expect(error?.message).toBe('Missing value for path parameter "id".')
@@ -314,10 +318,13 @@ describe('path params', () => {
 
 describe('response body', () => {
   it('throws status error when error body does not parse', async () => {
-    const fetch = vi.fn(async () => new Response('<html>Bad Gateway</html>', {
-      status: 502,
-      headers: { 'content-type': 'application/json' },
-    }))
+    const fetch = vi.fn(
+      async () =>
+        new Response('<html>Bad Gateway</html>', {
+          status: 502,
+          headers: { 'content-type': 'application/json' },
+        }),
+    )
 
     const [, error] = await catchError(createClient({ url: 'http://localhost', fetch }).get('/error'))
 
@@ -326,9 +333,12 @@ describe('response body', () => {
   })
 
   it('throws parse error when success body does not parse', async () => {
-    const fetch = vi.fn(async () => new Response('<html></html>', {
-      headers: { 'content-type': 'application/json' },
-    }))
+    const fetch = vi.fn(
+      async () =>
+        new Response('<html></html>', {
+          headers: { 'content-type': 'application/json' },
+        }),
+    )
 
     const [, error] = await catchError(createClient({ url: 'http://localhost', fetch }).get('/json'))
 
@@ -375,6 +385,11 @@ describe('response body', () => {
 
     const body = new URLSearchParams(fetch.mock.calls[0]![1]!.body as string)
 
-    expect([...body]).toEqual([['name', 'a b'], ['tags[]', 'x'], ['tags[]', 'y'], ['nested[key]', '&']])
+    expect([...body]).toEqual([
+      ['name', 'a b'],
+      ['tags[]', 'x'],
+      ['tags[]', 'y'],
+      ['nested[key]', '&'],
+    ])
   })
 })

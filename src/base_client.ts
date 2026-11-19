@@ -1,16 +1,11 @@
-import { RequestPromise } from './request_promise.js'
-import type {
-  RequestOptions,
-  Response,
-  OptionalResponseType,
-  ClientOptions,
-} from './types.js'
-import { abortError, errors, toRequestError } from './errors.js'
-import { Context } from './context.js'
-import { Retry } from './retry.js'
-import { Hooks } from './hooks.js'
-import { Headers } from './headers.js'
 import { contentTypes } from './constants.js'
+import { Context } from './context.js'
+import { abortError, errors, toRequestError } from './errors.js'
+import { Headers } from './headers.js'
+import { Hooks } from './hooks.js'
+import { RequestPromise } from './request_promise.js'
+import { Retry } from './retry.js'
+import type { RequestOptions, Response, OptionalResponseType, ClientOptions } from './types.js'
 
 const URL_REGEX = /^https?:\/\//
 
@@ -54,21 +49,10 @@ export class BaseClient extends Hooks {
     return `${baseUrl}${path}`
   }
 
-  request<
-    T = unknown,
-    D = any,
-    Type extends OptionalResponseType = OptionalResponseType,
-  >(options: RequestOptions<D, Type> = {}): RequestPromise<Response<T, Type>> {
-    const {
-      url = '/',
-      method = 'GET',
-      responseType = 'auto',
-      headers,
-      query,
-      params,
-      signal,
-      ...rest
-    } = options
+  request<T = unknown, D = any, Type extends OptionalResponseType = OptionalResponseType>(
+    options: RequestOptions<D, Type> = {},
+  ): RequestPromise<Response<T, Type>> {
+    const { url = '/', method = 'GET', responseType = 'auto', headers, query, params, signal, ...rest } = options
 
     const context = new Context({
       id: this.options.id,
@@ -95,13 +79,13 @@ export class BaseClient extends Hooks {
 
     const timeoutId = this.totalTimeout(context)
 
-    const promise = this.$request<T, Type>(context)
-      .finally(() => timeoutId && clearTimeout(timeoutId))
+    const promise = this.$request<T, Type>(context).finally(() => timeoutId && clearTimeout(timeoutId))
 
     return RequestPromise.create(promise, {
-      cancel: (reason) => context.controller.abort(
-        new errors.CanceledError(context, reason === undefined ? {} : { error: reason as Error }),
-      ),
+      cancel: (reason) =>
+        context.controller.abort(
+          new errors.CanceledError(context, reason === undefined ? {} : { error: reason as Error }),
+        ),
       // keeps the error of the previous attempt, if any, as totalTimeout does
       timeout: () => context.controller.abort(new errors.TimeoutError(context, { error: context.error })),
     })
@@ -125,8 +109,7 @@ export class BaseClient extends Hooks {
     let executor = fn
 
     if (context.config.retry) {
-      executor = () => new Retry(typeof context.config.retry === 'object' ? context.config.retry : {})
-        .run(fn, context)
+      executor = () => new Retry(typeof context.config.retry === 'object' ? context.config.retry : {}).run(fn, context)
     }
 
     let response: Response<T, Type>
@@ -137,8 +120,7 @@ export class BaseClient extends Hooks {
       const errorResults = await this.hook('error', error as errors['RequestError'])
 
       // the original error is not attached as cause, it holds request headers (credentials)
-      throw errorResults.reverse()
-        .find((item) => item instanceof Error) ?? (error as Error)
+      throw errorResults.reverse().find((item) => item instanceof Error) ?? (error as Error)
     }
 
     await this.hook('response', response)
@@ -150,10 +132,9 @@ export class BaseClient extends Hooks {
     return value instanceof errors.RequestError
   }
 
-  protected returnData<
-    T,
-    Type extends OptionalResponseType,
-  >(promise: RequestPromise<Response<T, Type>>): RequestPromise<Response<T, Type>['data']> {
+  protected returnData<T, Type extends OptionalResponseType>(
+    promise: RequestPromise<Response<T, Type>>,
+  ): RequestPromise<Response<T, Type>['data']> {
     return RequestPromise.map(promise, (value) => value.data)
   }
 
@@ -214,7 +195,7 @@ export class BaseClient extends Hooks {
     const valid = this.validate(response)
 
     try {
-      response.data = await this.processResponse(response, context.config.responseType) as any
+      response.data = (await this.processResponse(response, context.config.responseType)) as any
     } catch (error) {
       // aborted while reading the body
       if (signal.aborted) {

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { type Client, createClient } from '../src/index.js'
-import type { HookList } from '../src/hooks.js'
 import { RequestError } from '../src/errors.js'
+import type { HookList } from '../src/hooks.js'
+import { type Client, createClient } from '../src/index.js'
 import { catchError } from './helpers.js'
 
 let client: Client
@@ -40,12 +40,14 @@ describe('hooks', () => {
     client.on('request', fn)
     const limit = 2
 
-    await catchError(client.get('/error', {
-      retry: {
-        limit,
-        delay: () => 50,
-      },
-    }))
+    await catchError(
+      client.get('/error', {
+        retry: {
+          limit,
+          delay: () => 50,
+        },
+      }),
+    )
 
     expect(fn).toBeCalledTimes(limit + 1)
   })
@@ -59,7 +61,7 @@ describe('hooks', () => {
     const fn = vi.fn(onError)
     client.on('error', fn)
 
-    const [,error] = await catchError(client.get('/error'))
+    const [, error] = await catchError(client.get('/error'))
 
     expect(error).toBeInstanceOf(RequestError)
     expect(fn).toBeCalled()
@@ -69,7 +71,7 @@ describe('hooks', () => {
   it('does not attach original error as cause of replaced error', async () => {
     client.on('error', () => new Error('mapped'))
 
-    const [,error] = await catchError(client.get('/error'))
+    const [, error] = await catchError(client.get('/error'))
 
     expect(error?.message).toBe('mapped')
     expect(error?.cause).toBeUndefined()
@@ -78,7 +80,7 @@ describe('hooks', () => {
   it('keeps cause set by error hook', async () => {
     client.on('error', (error) => new Error('mapped', { cause: error }))
 
-    const [,error] = await catchError(client.get('/error'))
+    const [, error] = await catchError(client.get('/error'))
 
     expect(error?.message).toBe('mapped')
     expect(error?.cause).toBeInstanceOf(RequestError)

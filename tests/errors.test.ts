@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createClient, errors } from '../src/index.js'
 import type { RequestError } from '../src/errors.js'
+import { createClient, errors } from '../src/index.js'
 import { catchError } from './helpers.js'
 
 function clientWith(fetch: (input: string | URL | Request, init?: RequestInit) => Promise<Response>) {
@@ -52,9 +52,14 @@ describe('error kinds', () => {
   })
 
   it('parse', async () => {
-    const error = await failure(clientWith(async () => new Response('{"broken', {
-      headers: { 'content-type': 'application/json' },
-    })).get('/x'))
+    const error = await failure(
+      clientWith(
+        async () =>
+          new Response('{"broken', {
+            headers: { 'content-type': 'application/json' },
+          }),
+      ).get('/x'),
+    )
 
     expect(error).toMatchObject({ kind: 'parse', code: 'E_PARSE', status: 200 })
   })
@@ -116,12 +121,14 @@ describe('toJSON', () => {
   it('summarizes the request without headers and bodies', async () => {
     const client = clientWith(async () => Response.json({ error: 'invalid' }, { status: 422 }))
 
-    const error = await failure(client.post('/users/{id}', {
-      params: { id: 7 },
-      query: { page: 2 },
-      headers: { authorization: 'Bearer __SECRET__' },
-      data: { name: 'John', password: '__BODY__' },
-    }))
+    const error = await failure(
+      client.post('/users/{id}', {
+        params: { id: 7 },
+        query: { page: 2 },
+        headers: { authorization: 'Bearer __SECRET__' },
+        data: { name: 'John', password: '__BODY__' },
+      }),
+    )
 
     const json = error.toJSON()
 
@@ -147,17 +154,21 @@ describe('toJSON', () => {
   })
 
   it('falls back to the URL template when a path parameter is missing', async () => {
-    const error = await failure(clientWith(async () => Response.json({})).get('/users/{id}', {
-      query: { page: 1 },
-    }))
+    const error = await failure(
+      clientWith(async () => Response.json({})).get('/users/{id}', {
+        query: { page: 1 },
+      }),
+    )
 
     expect(error.toJSON().url).toBe('http://localhost/users/{id}')
   })
 
   it('keeps the bodies on the error and its config', async () => {
-    const error = await failure(clientWith(async () => Response.json({ a: 1 }, { status: 500 })).post('/x', {
-      data: { b: 2 },
-    }))
+    const error = await failure(
+      clientWith(async () => Response.json({ a: 1 }, { status: 500 })).post('/x', {
+        data: { b: 2 },
+      }),
+    )
 
     expect(error.data).toEqual({ a: 1 })
     expect(error.config.data).toEqual({ b: 2 })

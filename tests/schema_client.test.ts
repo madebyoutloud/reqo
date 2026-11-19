@@ -15,16 +15,12 @@ const ignore = () => undefined
 
 describe('schema client paths', () => {
   it('only accepts paths supporting the method', () => {
-    expectTypeOf(api.$get).parameter(0)
-      .toEqualTypeOf<
-      '/museum-hours' | '/special-events' | '/special-events/{eventId}' | '/tickets/{ticketId}/qr'
-    >()
-    expectTypeOf(api.$post).parameter(0)
-      .toEqualTypeOf<'/special-events' | '/tickets'>()
-    expectTypeOf(api.$patch).parameter(0)
-      .toEqualTypeOf<'/special-events/{eventId}'>()
-    expectTypeOf(api.$delete).parameter(0)
-      .toEqualTypeOf<'/special-events/{eventId}'>()
+    expectTypeOf(api.$get)
+      .parameter(0)
+      .toEqualTypeOf<'/museum-hours' | '/special-events' | '/special-events/{eventId}' | '/tickets/{ticketId}/qr'>()
+    expectTypeOf(api.$post).parameter(0).toEqualTypeOf<'/special-events' | '/tickets'>()
+    expectTypeOf(api.$patch).parameter(0).toEqualTypeOf<'/special-events/{eventId}'>()
+    expectTypeOf(api.$delete).parameter(0).toEqualTypeOf<'/special-events/{eventId}'>()
   })
 
   it('rejects unknown paths and unsupported methods', () => {
@@ -99,25 +95,27 @@ describe('schema client options', () => {
 
 describe('schema client responses', () => {
   it('infers success response data', async () => {
-    expectTypeOf(await api.$get('/museum-hours'))
-      .toEqualTypeOf<components['schemas']['MuseumHours']>()
+    expectTypeOf(await api.$get('/museum-hours')).toEqualTypeOf<components['schemas']['MuseumHours']>()
 
-    expectTypeOf(await api.$get('/special-events'))
-      .toEqualTypeOf<components['schemas']['SpecialEventCollection']>()
+    expectTypeOf(await api.$get('/special-events')).toEqualTypeOf<components['schemas']['SpecialEventCollection']>()
 
-    expectTypeOf(await api.$post('/special-events', {
-      data: { name: 'x', location: 'y', eventDescription: 'z', dates: [], price: 1 },
-    })).toEqualTypeOf<components['schemas']['SpecialEvent']>()
+    expectTypeOf(
+      await api.$post('/special-events', {
+        data: { name: 'x', location: 'y', eventDescription: 'z', dates: [], price: 1 },
+      }),
+    ).toEqualTypeOf<components['schemas']['SpecialEvent']>()
   })
 
   it('infers non-json media types', async () => {
-    expectTypeOf(await api.$get('/tickets/{ticketId}/qr', { params: { ticketId: '1' } }))
-      .toEqualTypeOf<components['schemas']['TicketCodeImage']>()
+    expectTypeOf(await api.$get('/tickets/{ticketId}/qr', { params: { ticketId: '1' } })).toEqualTypeOf<
+      components['schemas']['TicketCodeImage']
+    >()
   })
 
   it('infers undefined for empty responses', async () => {
-    expectTypeOf(await api.$delete('/special-events/{eventId}', { params: { eventId: '1' } }))
-      .toEqualTypeOf<undefined>()
+    expectTypeOf(
+      await api.$delete('/special-events/{eventId}', { params: { eventId: '1' } }),
+    ).toEqualTypeOf<undefined>()
   })
 
   it('returns a typed response object without the $ prefix', async () => {
@@ -136,15 +134,16 @@ describe('schema client responses', () => {
 
 describe('schema helper types', () => {
   it('exposes response and error data', () => {
-    expectTypeOf<SchemaResponseData<paths, '/special-events', 'get'>>()
-      .toEqualTypeOf<components['schemas']['SpecialEventCollection']>()
+    expectTypeOf<SchemaResponseData<paths, '/special-events', 'get'>>().toEqualTypeOf<
+      components['schemas']['SpecialEventCollection']
+    >()
 
-    expectTypeOf<SchemaErrorData<paths, '/special-events', 'get'>>()
-      .toEqualTypeOf<components['schemas']['Error']>()
+    expectTypeOf<SchemaErrorData<paths, '/special-events', 'get'>>().toEqualTypeOf<components['schemas']['Error']>()
   })
 
   it('exposes request options', () => {
-    expectTypeOf<SchemaRequestOptions<operations['getSpecialEvent']>['params']>()
-      .toEqualTypeOf<{ eventId: components['parameters']['EventId'] }>()
+    expectTypeOf<SchemaRequestOptions<operations['getSpecialEvent']>['params']>().toEqualTypeOf<{
+      eventId: components['parameters']['EventId']
+    }>()
   })
 })

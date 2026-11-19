@@ -45,8 +45,7 @@ export function buildQuery(value: unknown, path?: string): [string, string][] {
   }
 
   if (typeof value === 'object') {
-    return Object.entries(value)
-      .flatMap(([key, item]) => buildQuery(item, path ? `${path}[${key}]` : key))
+    return Object.entries(value).flatMap(([key, item]) => buildQuery(item, path ? `${path}[${key}]` : key))
   }
 
   if (!path) {

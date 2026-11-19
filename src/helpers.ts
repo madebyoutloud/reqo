@@ -1,12 +1,10 @@
 export function getNativeClass(value: unknown): string {
   // [object Class]
-  return Object.prototype.toString.call(value)
-    .slice(8, -1)
+  return Object.prototype.toString.call(value).slice(8, -1)
 }
 
 export function isFormData(value: unknown): value is FormData {
-  return (typeof FormData === 'function' && value instanceof FormData) ||
-    getNativeClass(value) === 'FormData'
+  return (typeof FormData === 'function' && value instanceof FormData) || getNativeClass(value) === 'FormData'
 }
 
 export function isNativeClass(value: unknown, className: readonly string[] | string): boolean {

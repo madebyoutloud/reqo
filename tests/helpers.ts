@@ -7,8 +7,7 @@ export function catchError<T extends Promise<any> | (() => any)>(input: T): Prom
     const result = input instanceof Promise ? input : input()
 
     if (result instanceof Promise) {
-      return result.then((data) => [data, null] as Result<any>)
-        .catch((error) => [null, error] as Result<any>)
+      return result.then((data) => [data, null] as Result<any>).catch((error) => [null, error] as Result<any>)
     }
 
     return [result, null]

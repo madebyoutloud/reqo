@@ -6,14 +6,17 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /** fetch that answers after `ms`, or rejects when its signal aborts */
 function slowFetch(ms: number) {
-  return vi.fn((_input: string | URL | Request, init?: RequestInit) => new Promise<Response>((resolve, reject) => {
-    const timer = setTimeout(() => resolve(Response.json({ ok: true })), ms)
+  return vi.fn(
+    (_input: string | URL | Request, init?: RequestInit) =>
+      new Promise<Response>((resolve, reject) => {
+        const timer = setTimeout(() => resolve(Response.json({ ok: true })), ms)
 
-    init?.signal?.addEventListener('abort', () => {
-      clearTimeout(timer)
-      reject(init.signal!.reason)
-    })
-  }))
+        init?.signal?.addEventListener('abort', () => {
+          clearTimeout(timer)
+          reject(init.signal!.reason)
+        })
+      }),
+  )
 }
 
 describe('RequestPromise', () => {
@@ -43,7 +46,7 @@ describe('RequestPromise', () => {
 
     request.cancel(reason)
 
-    const error = await request.catch((error_: unknown) => error_) as errors['RequestError']
+    const error = (await request.catch((error_: unknown) => error_)) as errors['RequestError']
 
     expect(error).toBeInstanceOf(errors.CanceledError)
     expect(error.kind).toBe('canceled')
@@ -72,7 +75,7 @@ describe('RequestPromise', () => {
 
     expect(request.timeout(20)).toBe(request)
 
-    const error = await request.catch((error_: unknown) => error_) as errors['RequestError']
+    const error = (await request.catch((error_: unknown) => error_)) as errors['RequestError']
 
     expect(error).toBeInstanceOf(errors.TimeoutError)
     expect(error.kind).toBe('timeout')
@@ -80,7 +83,8 @@ describe('RequestPromise', () => {
   })
 
   it('does not time out a request that settles in time', async () => {
-    const request = createClient({ url: 'http://localhost', fetch: slowFetch(0) }).$get('/x')
+    const request = createClient({ url: 'http://localhost', fetch: slowFetch(0) })
+      .$get('/x')
       .timeout(50)
 
     await expect(request).resolves.toEqual({ ok: true })
@@ -109,7 +113,8 @@ describe('RequestPromise', () => {
   })
 
   it('keeps result() as an alias of safe()', async () => {
-    const [data, error] = await createClient({ url: 'http://localhost', fetch: slowFetch(0) }).$get('/x')
+    const [data, error] = await createClient({ url: 'http://localhost', fetch: slowFetch(0) })
+      .$get('/x')
       .result()
 
     expect(data).toEqual({ ok: true })

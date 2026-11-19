@@ -54,7 +54,7 @@ const delay: DelayFn = ({ retryCount, error, retryAfter }) => {
     return retryAfter
   }
 
-  return 0.1 * (2 ** (retryCount - 1)) * 1000
+  return 0.1 * 2 ** (retryCount - 1) * 1000
 }
 
 const validate: ValidateFn = ({ retryCount, error }, options) => {
@@ -101,10 +101,7 @@ export class Retry {
         context.retryCount++
         context.retryAfter = error instanceof errors.RequestError ? parseRetryAfter(error.response) : undefined
 
-        if (!(error instanceof errors.RequestError) ||
-          context.signal.aborted ||
-          !this.validate(context)
-        ) {
+        if (!(error instanceof errors.RequestError) || context.signal.aborted || !this.validate(context)) {
           throw error
         }
 

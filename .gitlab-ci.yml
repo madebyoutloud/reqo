@@ -1,13 +1,13 @@
 variables:
   PIPELINE:
-    description: "Specify which pipeline to run"
+    description: 'Specify which pipeline to run'
     value: docs
     options: [publish, docs]
 
 stages: [test, build, deploy, publish]
 
 include:
-    # test
+  # test
   - component: $OUTLOUD_CI/test-nodejs@4
     inputs:
       name: lint

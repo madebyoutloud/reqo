@@ -1,11 +1,5 @@
-import type { RequestPromise } from './request_promise.js'
 import { BaseClient } from './base_client.js'
-import type {
-  ClientOptions,
-  OptionalResponseType as ResponseType,
-  RequestOptions as BaseRequestOptions,
-  ResponseOrData,
-} from './types.js'
+import type { RequestPromise } from './request_promise.js'
 import type {
   HttpMethod,
   IsNever,
@@ -17,6 +11,12 @@ import type {
   ResponseObjectMap,
   SuccessResponse,
 } from './schema.js'
+import type {
+  ClientOptions,
+  OptionalResponseType as ResponseType,
+  RequestOptions as BaseRequestOptions,
+  ResponseOrData,
+} from './types.js'
 
 declare const untyped: unique symbol
 
@@ -42,17 +42,16 @@ export type Plugin = PluginFn | PluginObject
 type IsAny<T> = 0 extends 1 & T ? true : false
 
 /** Options of a request method of an untyped client */
-type UntypedRequestOptions<
-  D = any,
-  Type extends ResponseType = ResponseType,
-> = Omit<BaseRequestOptions<D, Type>, 'url' | 'method'>
+type UntypedRequestOptions<D = any, Type extends ResponseType = ResponseType> = Omit<
+  BaseRequestOptions<D, Type>,
+  'url' | 'method'
+>
 
 /** Request method of an untyped client: any URL, `T` types the response data. */
-export type UntypedMethod<ReturnData extends boolean = false> = <
-  T,
-  D = any,
-  Type extends ResponseType = ResponseType,
->(url: string, options?: UntypedRequestOptions<D, Type>) => RequestPromise<ResponseOrData<T, Type, ReturnData>>
+export type UntypedMethod<ReturnData extends boolean = false> = <T, D = any, Type extends ResponseType = ResponseType>(
+  url: string,
+  options?: UntypedRequestOptions<D, Type>,
+) => RequestPromise<ResponseOrData<T, Type, ReturnData>>
 
 /** Request method of a typed client: paths, options and response data come from the schema. */
 export type SchemaMethod<
@@ -60,30 +59,20 @@ export type SchemaMethod<
   Method extends HttpMethod,
   ReturnData extends boolean = false,
   Media extends MediaType = MediaType,
-> = <
-  Path extends PathsWithMethod<Paths, Method>,
-  Type extends ResponseType = ResponseType,
->(
+> = <Path extends PathsWithMethod<Paths, Method>, Type extends ResponseType = ResponseType>(
   url: Path,
   ...options: IsNever<RequiredKeys<SchemaRequestOptions<Operation<Paths, Path, Method>, Type>>> extends true
     ? [options?: SchemaRequestOptions<Operation<Paths, Path, Method>, Type>]
     : [options: SchemaRequestOptions<Operation<Paths, Path, Method>, Type>]
 ) => RequestPromise<
-  ResponseOrData<
-    SuccessResponse<ResponseObjectMap<Operation<Paths, Path, Method>>, Media>,
-    Type,
-    ReturnData
-  >
+  ResponseOrData<SuccessResponse<ResponseObjectMap<Operation<Paths, Path, Method>>, Media>, Type, ReturnData>
 >
 
 /** Request method of a client, untyped unless the client has `Paths`. */
-export type ClientMethod<
-  Paths,
-  Method extends HttpMethod,
-  ReturnData extends boolean = false,
-> = IsAny<Paths> extends true
-  ? UntypedMethod<ReturnData>
-  : [Paths] extends [Untyped]
+export type ClientMethod<Paths, Method extends HttpMethod, ReturnData extends boolean = false> =
+  IsAny<Paths> extends true
+    ? UntypedMethod<ReturnData>
+    : [Paths] extends [Untyped]
       ? UntypedMethod<ReturnData>
       : SchemaMethod<Paths, Method, ReturnData>
 

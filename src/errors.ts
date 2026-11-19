@@ -60,8 +60,7 @@ function errorCode(error: unknown): string | undefined {
 }
 
 function isEmpty(value: unknown) {
-  return value === undefined || value === null ||
-    (typeof value === 'object' && Object.keys(value).length === 0)
+  return value === undefined || value === null || (typeof value === 'object' && Object.keys(value).length === 0)
 }
 
 export class RequestError extends Error {
@@ -102,7 +101,8 @@ export class RequestError extends Error {
 
     this.kind = options.kind ?? (this.response ? 'http' : 'network')
     // fetch rejects network failures with `TypeError: fetch failed`, the code (e.g. `UND_ERR_SOCKET`) is on its cause
-    this.code = options.code ||
+    this.code =
+      options.code ||
       (this.kind === 'network' ? errorCode(options.error) || errorCode(options.error?.cause) : undefined) ||
       defaultCodes[this.kind]
 

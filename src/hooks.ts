@@ -65,7 +65,6 @@ export class HookRunner<T extends Hook> {
   }
 
   static run<T extends Hook>(hooks: T[] = [], ...args: Parameters<T>) {
-    return new HookRunner<T>(hooks)
-      .run(...args)
+    return new HookRunner<T>(hooks).run(...args)
   }
 }

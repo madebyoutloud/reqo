@@ -16,9 +16,8 @@ export class Headers {
   set(values: string | HeadersInput, ...args: any[]): this {
     if (typeof values === 'object') {
       // a `Headers` instance and entries are iterable, a plain object is not
-      const entries = Symbol.iterator in values
-        ? values as Iterable<readonly [string, unknown]>
-        : Object.entries(values)
+      const entries =
+        Symbol.iterator in values ? (values as Iterable<readonly [string, unknown]>) : Object.entries(values)
 
       for (const [name, value] of entries) {
         this.set(name, value, args[0])

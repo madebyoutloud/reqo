@@ -1,7 +1,7 @@
-import type { OptionalResponseType, Values, RequestConfig, RequestState, Response } from './types.js'
 import { responseTypes, streamTypes } from './constants.js'
-import { isFormData, isNativeClass } from './helpers.js'
 import type { errors } from './errors.js'
+import { isFormData, isNativeClass } from './helpers.js'
+import type { OptionalResponseType, Values, RequestConfig, RequestState, Response } from './types.js'
 import { buildQuery, buildUrl } from './url.js'
 
 export class Context implements RequestState {

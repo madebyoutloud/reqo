@@ -1,9 +1,9 @@
 import { setTimeout } from 'node:timers/promises'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { http, HttpResponse } from 'msw'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { RequestError } from '../src/errors.js'
 import { type Client, createClient, errors } from '../src/index.js'
 import { parseRetryAfter } from '../src/retry.js'
-import type { RequestError } from '../src/errors.js'
 import type { ErrorRequestState } from '../src/types.js'
 import { catchError } from './helpers.js'
 import { server } from './mocks/api.js'
@@ -30,9 +30,11 @@ describe('retry', () => {
 
     const retries = 2
 
-    const [,error] = await catchError(client.get('/retry', {
-      retry: { limit: retries, delay: () => 10 },
-    }))
+    const [, error] = await catchError(
+      client.get('/retry', {
+        retry: { limit: retries, delay: () => 10 },
+      }),
+    )
 
     expect(error).toBeInstanceOf(errors.RequestError)
 
@@ -46,9 +48,7 @@ describe('retry', () => {
       http.get('http://localhost/retry', () => {
         fn()
 
-        return fn.mock.calls.length === 1
-          ? HttpResponse.json({}, { status: 503 })
-          : HttpResponse.json({ ok: true })
+        return fn.mock.calls.length === 1 ? HttpResponse.json({}, { status: 503 }) : HttpResponse.json({ ok: true })
       }),
     )
 
@@ -79,11 +79,13 @@ describe('retry', () => {
     )
 
     const startAt = Date.now()
-    const [,error] = await catchError(client.get('/retry', {
-      // the timed out second attempt is the last one
-      retry: { delay: () => 50, limit: 1 },
-      timeout: 100,
-    }))
+    const [, error] = await catchError(
+      client.get('/retry', {
+        // the timed out second attempt is the last one
+        retry: { delay: () => 50, limit: 1 },
+        timeout: 100,
+      }),
+    )
     const elapsed = Date.now() - startAt
 
     expect(error).toBeInstanceOf(errors.TimeoutError)
@@ -138,7 +140,7 @@ describe('retry', () => {
 
     globalThis.setTimeout(() => request.cancel(), 150)
 
-    const [,error] = await catchError(request)
+    const [, error] = await catchError(request)
 
     expect(error).toBeInstanceOf(errors.CanceledError)
     expect(fn).toBeCalledTimes(2)
@@ -157,11 +159,13 @@ describe('retry', () => {
     )
 
     const startAt = Date.now()
-    const [,error] = await catchError(client.get('/retry', {
-      retry: { delay: () => 10, limit: 5 },
-      timeout: 100,
-      totalTimeout: 250,
-    }))
+    const [, error] = await catchError(
+      client.get('/retry', {
+        retry: { delay: () => 10, limit: 5 },
+        timeout: 100,
+        totalTimeout: 250,
+      }),
+    )
     const elapsed = Date.now() - startAt
 
     expect(error).toBeInstanceOf(errors.TimeoutError)
@@ -208,9 +212,11 @@ describe('retry', () => {
     )
 
     const startAt = Date.now()
-    const [,error] = await catchError(client.get('/retry', {
-      retry: { delay: () => 5000, maxDelay: 1000 },
-    }))
+    const [, error] = await catchError(
+      client.get('/retry', {
+        retry: { delay: () => 5000, maxDelay: 1000 },
+      }),
+    )
 
     expect(error).toBeInstanceOf(errors.RequestError)
     expect((error as RequestError).status).toBe(429)
@@ -219,9 +225,7 @@ describe('retry', () => {
   })
 
   it('stops waiting when signal is aborted', async () => {
-    server.use(
-      http.get('http://localhost/retry', () => HttpResponse.json({}, { status: 429 })),
-    )
+    server.use(http.get('http://localhost/retry', () => HttpResponse.json({}, { status: 429 })))
 
     const controller = new AbortController()
     const request = client.get('/retry', {
@@ -235,7 +239,7 @@ describe('retry', () => {
       controller.abort()
     }, 50)
 
-    const [,error] = await catchError(request)
+    const [, error] = await catchError(request)
 
     expect(Date.now() - abortedAt).toBeLessThan(100)
     expect(error).toBeInstanceOf(errors.CanceledError)
@@ -243,9 +247,7 @@ describe('retry', () => {
   })
 
   it('stops waiting when client signal is aborted', async () => {
-    server.use(
-      http.get('http://localhost/retry', () => HttpResponse.json({}, { status: 429 })),
-    )
+    server.use(http.get('http://localhost/retry', () => HttpResponse.json({}, { status: 429 })))
 
     const controller = new AbortController()
     const signalClient = createClient({
@@ -261,7 +263,7 @@ describe('retry', () => {
       controller.abort()
     }, 50)
 
-    const [,error] = await catchError(request)
+    const [, error] = await catchError(request)
 
     expect(Date.now() - abortedAt).toBeLessThan(100)
     expect(error).toBeInstanceOf(errors.CanceledError)
@@ -269,9 +271,7 @@ describe('retry', () => {
   })
 
   it('stops waiting when request is canceled', async () => {
-    server.use(
-      http.get('http://localhost/retry', () => HttpResponse.json({}, { status: 429 })),
-    )
+    server.use(http.get('http://localhost/retry', () => HttpResponse.json({}, { status: 429 })))
 
     const request = client.get('/retry', {
       retry: { delay: () => 5000 },
@@ -283,7 +283,7 @@ describe('retry', () => {
       request.cancel()
     }, 50)
 
-    const [,error] = await catchError(request)
+    const [, error] = await catchError(request)
 
     expect(Date.now() - canceledAt).toBeLessThan(100)
     expect(error).toBeInstanceOf(errors.CanceledError)
@@ -296,15 +296,15 @@ describe('retry', () => {
       http.get('http://localhost/retry', () => {
         fn()
 
-        return fn.mock.calls.length === 1
-          ? HttpResponse.json({}, { status: 500 })
-          : HttpResponse.error()
+        return fn.mock.calls.length === 1 ? HttpResponse.json({}, { status: 500 }) : HttpResponse.error()
       }),
     )
 
-    const [,error] = await catchError(client.get('/retry', {
-      retry: { delay: () => 10 },
-    }))
+    const [, error] = await catchError(
+      client.get('/retry', {
+        retry: { delay: () => 10 },
+      }),
+    )
 
     expect(fn).toBeCalledTimes(2)
     expect(error).toBeInstanceOf(errors.RequestError)
@@ -330,11 +330,13 @@ describe('retry', () => {
     )
 
     const startAt = Date.now()
-    const [,error] = await catchError(client.get('/retry', {
-      retry: { delay: () => 50 },
-      timeout: 1000,
-      totalTimeout: 200,
-    }))
+    const [, error] = await catchError(
+      client.get('/retry', {
+        retry: { delay: () => 50 },
+        timeout: 1000,
+        totalTimeout: 200,
+      }),
+    )
     const elapsed = Date.now() - startAt
 
     expect(fn).toBeCalledTimes(2)
@@ -359,8 +361,9 @@ describe('retry', () => {
 
     // client option is kept when the request passes its own retry options
     const startAt = Date.now()
-    const [,error] = await catchError(createClient({ url: 'http://localhost', totalTimeout: 1000 })
-      .get('/retry', { retry: { delay: () => 5000 } }))
+    const [, error] = await catchError(
+      createClient({ url: 'http://localhost', totalTimeout: 1000 }).get('/retry', { retry: { delay: () => 5000 } }),
+    )
 
     expect(fn).toBeCalledTimes(1)
     expect(error).toBeInstanceOf(errors.RequestError)
@@ -376,9 +379,7 @@ describe('retry', () => {
       http.get('http://localhost/retry', () => {
         fn()
 
-        return fn.mock.calls.length === 1
-          ? HttpResponse.json({}, { status: 503 })
-          : HttpResponse.json({ ok: true })
+        return fn.mock.calls.length === 1 ? HttpResponse.json({}, { status: 503 }) : HttpResponse.json({ ok: true })
       }),
     )
 
@@ -466,7 +467,7 @@ describe('retry', () => {
     )
 
     const startAt = Date.now()
-    const [,error] = await catchError(client.get('/retry', { retry: true }))
+    const [, error] = await catchError(client.get('/retry', { retry: true }))
 
     expect(fn).toBeCalledTimes(1)
     expect((error as RequestError).status).toBe(429)
@@ -485,9 +486,11 @@ describe('network error code', () => {
   it('retries a network error with the code on the cause', async () => {
     const fetch = networkFailure('UND_ERR_SOCKET')
 
-    const [, error] = await catchError(createClient({ url: 'http://localhost', fetch }).get('/retry', {
-      retry: { delay: () => 10 },
-    }))
+    const [, error] = await catchError(
+      createClient({ url: 'http://localhost', fetch }).get('/retry', {
+        retry: { delay: () => 10 },
+      }),
+    )
 
     expect((error as RequestError).code).toBe('UND_ERR_SOCKET')
     expect(fetch).toBeCalledTimes(3)
@@ -506,9 +509,11 @@ describe('network error code', () => {
   it('does not retry a network error without a code', async () => {
     const fetch = networkFailure()
 
-    const [, error] = await catchError(createClient({ url: 'http://localhost', fetch }).get('/retry', {
-      retry: { delay: () => 10 },
-    }))
+    const [, error] = await catchError(
+      createClient({ url: 'http://localhost', fetch }).get('/retry', {
+        retry: { delay: () => 10 },
+      }),
+    )
 
     expect((error as RequestError).code).toBe('E_NETWORK')
     expect((error as RequestError).kind).toBe('network')
@@ -518,18 +523,21 @@ describe('network error code', () => {
   it('does not retry a network error with the code on a non retried method', async () => {
     const fetch = networkFailure('UND_ERR_SOCKET')
 
-    await catchError(createClient({ url: 'http://localhost', fetch }).post('/retry', {
-      retry: { delay: () => 10 },
-    }))
+    await catchError(
+      createClient({ url: 'http://localhost', fetch }).post('/retry', {
+        retry: { delay: () => 10 },
+      }),
+    )
 
     expect(fetch).toBeCalledTimes(1)
   })
 })
 
 describe('parseRetryAfter', () => {
-  const response = (value?: string) => new Response(null, {
-    headers: value === undefined ? {} : { 'Retry-After': value },
-  })
+  const response = (value?: string) =>
+    new Response(null, {
+      headers: value === undefined ? {} : { 'Retry-After': value },
+    })
 
   it('parses seconds', () => {
     expect(parseRetryAfter(response('120'))).toBe(120_000)

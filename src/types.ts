@@ -1,7 +1,7 @@
+import type { Plugin } from './client.js'
 import type { errors } from './errors.js'
 import type { Headers } from './headers.js'
 import type { UserRetryOptions } from './retry.js'
-import type { Plugin } from './client.js'
 
 /** Decides whether a response is successful, runs before the body is read, so `response.data` is not set yet */
 export type ValidateFn = (response: Response) => boolean
@@ -26,10 +26,7 @@ export interface ResponseTypes<T = any> {
   none: undefined
 }
 
-export interface RequestOptions<
-  D = any,
-  Type extends OptionalResponseType = OptionalResponseType,
-> {
+export interface RequestOptions<D = any, Type extends OptionalResponseType = OptionalResponseType> {
   url?: string
   method?: RequestMethod
 
@@ -58,10 +55,7 @@ export interface RequestOptions<
   retry?: UserRetryOptions | boolean
 }
 
-export interface RequestConfig<
-  D = any,
-  Type extends OptionalResponseType = any,
-> {
+export interface RequestConfig<D = any, Type extends OptionalResponseType = any> {
   /** Identifier of the client, from `ClientOptions.id` */
   id?: string
   /** Human label of the client, from `ClientOptions.name` */
@@ -91,14 +85,13 @@ export interface RequestConfig<
   retry?: UserRetryOptions | boolean
 }
 
-export type ResponseData<T, Type extends OptionalResponseType> = ResponseTypes<T>[
-  ResponseType extends Type ? 'auto' : Type extends false ? 'none' : Type
-]
+export type ResponseData<T, Type extends OptionalResponseType> = ResponseTypes<T>[ResponseType extends Type
+  ? 'auto'
+  : Type extends false
+    ? 'none'
+    : Type]
 
-export interface Response<
-  T = any,
-  Type extends OptionalResponseType = any,
-> extends globalThis.Response {
+export interface Response<T = any, Type extends OptionalResponseType = any> extends globalThis.Response {
   data: ResponseData<T, Type>
 }
 
