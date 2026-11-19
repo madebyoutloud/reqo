@@ -36,7 +36,7 @@ Query values are serialized for you: `null` and `undefined` are skipped, arrays 
 
 - Retrying writes. Retries are off unless you pass `retry`. Then only `GET`, `HEAD` and `OPTIONS` retry, on transient status codes and network errors. Add `methods: ['POST']` only when the endpoint is idempotent.
 - Retries without `totalTimeout` on requests a user waits for. `timeout`, 60 seconds by default, applies to each attempt, and a timed-out attempt is retried like a network error.
-- Logging the error object or its `config`. `error.config` holds the request headers, credentials included. Log `error.toLog()`: no headers, sensitive keys masked, files replaced, bodies cut to 4 KB. Use `sanitize(value)` to log other request data the same way.
+- Logging the error object or its `config`. `error.config` holds the request headers, credentials included. Log `error.toJSON()`: client, method, full URL, status, kind, code, duration and attempts, without headers and bodies. It doesn't mask values in the URL, and bodies (`error.config.data`, `error.data`) go through the logger's redaction if you log them.
 - Building query strings or putting values into the path by hand.
 
 ## Invalid patterns
@@ -64,7 +64,7 @@ try {
 }
 ```
 
-A `RequestError` has `kind` (`http`, `timeout`, `network`, `canceled`, `parse`, `invalid`), `status` (`undefined` without a response), `code` (`E_HTTP`, `E_TIMEOUT`, `E_CANCELED`, `E_PARSE`, `E_INVALID_REQUEST`, or a network code such as `ECONNREFUSED`, `E_NETWORK` without one), `data`, `duration`, `attempts`, `response`, `config` (with the client `id`, `name` and `meta`), `toLog()` and `toJSON()`. Branch on `kind` rather than on `status` or `code` to tell a server error from an unreachable server.
+A `RequestError` has `kind` (`http`, `timeout`, `network`, `canceled`, `parse`, `invalid`), `status` (`undefined` without a response), `code` (`E_HTTP`, `E_TIMEOUT`, `E_CANCELED`, `E_PARSE`, `E_INVALID_REQUEST`, or a network code such as `ECONNREFUSED`, `E_NETWORK` without one), `data`, `duration`, `attempts`, `response`, `config` (with the client `id`, `name` and `meta`) and `toJSON()`. Branch on `kind` rather than on `status` or `code` to tell a server error from an unreachable server.
 
 ### Mapping errors in one place
 

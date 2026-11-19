@@ -6,9 +6,7 @@ export { Client } from './client.js'
 export type { Untyped, Plugin, ClientMethod, UntypedMethod, SchemaMethod } from './client.js'
 
 export { errors } from './errors.js'
-export type { ErrorKind, LogOptions, RequestErrorLog } from './errors.js'
-export { sanitize, defaultSensitiveKeys } from './sanitize.js'
-export type { SanitizeOptions } from './sanitize.js'
+export type { ErrorKind, RequestErrorJSON } from './errors.js'
 
 export type {
   RequestState,

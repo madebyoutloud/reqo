@@ -112,27 +112,24 @@ describe('error identity', () => {
   })
 })
 
-describe('toLog', () => {
-  it('returns a safe snapshot', async () => {
-    const client = clientWith(async () => Response.json({
-      error: 'invalid',
-      access_token: 'leaked',
-    }, { status: 422 }))
+describe('toJSON', () => {
+  it('summarizes the request without headers and bodies', async () => {
+    const client = clientWith(async () => Response.json({ error: 'invalid' }, { status: 422 }))
 
     const error = await failure(client.post('/users/{id}', {
       params: { id: 7 },
-      query: { page: 2, token: 'abc' },
+      query: { page: 2 },
       headers: { authorization: 'Bearer __SECRET__' },
-      data: { name: 'John', password: 'hunter2', nested: { apiKey: 'k' } },
+      data: { name: 'John', password: '__BODY__' },
     }))
 
-    const log = error.toLog()
+    const json = error.toJSON()
 
-    expect(log).toEqual({
+    expect(json).toEqual({
       client: 'aml',
       clientName: 'AML service',
       method: 'POST',
-      url: 'http://localhost/users/7?page=2&token=[REDACTED]',
+      url: 'http://localhost/users/7?page=2',
       params: { id: 7 },
       status: 422,
       kind: 'http',
@@ -140,65 +137,29 @@ describe('toLog', () => {
       message: 'Request failed with status code 422.',
       duration: expect.any(Number),
       attempts: 1,
-      requestBody: { name: 'John', password: '[REDACTED]', nested: { apiKey: '[REDACTED]' } },
-      responseBody: { error: 'invalid', access_token: '[REDACTED]' },
     })
 
-    expect(JSON.stringify(log)).not.toContain('__SECRET__')
-    expect(JSON.parse(JSON.stringify(log))).toEqual(log)
-  })
+    const serialized = JSON.stringify(error)
 
-  it('replaces files with placeholders', async () => {
-    const form = new FormData()
-    form.append('title', 'Report')
-    form.append('file', new File(['x'.repeat(2048)], 'report.pdf', { type: 'application/pdf' }))
-
-    const error = await failure(clientWith(async () => new Response(null, { status: 500 })).post('/upload', {
-      data: form,
-    }))
-
-    expect(error.toLog().requestBody).toEqual({ title: 'Report', file: '[File report.pdf, 2.0 KB]' })
-  })
-
-  it('cuts bodies to maxLength', async () => {
-    const error = await failure(clientWith(async () => new Response('x'.repeat(10_000), {
-      status: 500,
-      headers: { 'content-type': 'text/plain' },
-    })).get('/x'))
-
-    const body = error.toLog({ maxLength: 100 }).responseBody as string
-
-    expect(body.startsWith('x'.repeat(100))).toBe(true)
-    expect(body).toContain('[truncated, 9.8 KB]')
-    expect((error.toLog().responseBody as string).length).toBeLessThan(4200)
-  })
-
-  it('leaves out bodies with body: false', async () => {
-    const error = await failure(clientWith(async () => Response.json({ a: 1 }, { status: 500 })).post('/x', {
-      data: { b: 2 },
-    }))
-
-    expect(error.toLog({ body: false })).not.toHaveProperty('requestBody')
-    expect(error.toLog({ body: false })).not.toHaveProperty('responseBody')
-  })
-
-  it('accepts custom sensitive keys', async () => {
-    const error = await failure(clientWith(async () => new Response(null, { status: 500 })).post('/x', {
-      query: { iban: 'SK00' },
-      data: { iban: 'SK00', password: 'p' },
-    }))
-
-    const log = error.toLog({ sensitiveKeys: ['iban'] })
-
-    expect(log.url).toBe('http://localhost/x?iban=[REDACTED]')
-    expect(log.requestBody).toEqual({ iban: '[REDACTED]', password: 'p' })
+    expect(serialized).not.toContain('__SECRET__')
+    expect(serialized).not.toContain('__BODY__')
+    expect(JSON.parse(serialized)).toEqual(json)
   })
 
   it('falls back to the URL template when a path parameter is missing', async () => {
     const error = await failure(clientWith(async () => Response.json({})).get('/users/{id}', {
-      query: { secret: 's' },
+      query: { page: 1 },
     }))
 
-    expect(error.toLog().url).toBe('http://localhost/users/{id}')
+    expect(error.toJSON().url).toBe('http://localhost/users/{id}')
+  })
+
+  it('keeps the bodies on the error and its config', async () => {
+    const error = await failure(clientWith(async () => Response.json({ a: 1 }, { status: 500 })).post('/x', {
+      data: { b: 2 },
+    }))
+
+    expect(error.data).toEqual({ a: 1 })
+    expect(error.config.data).toEqual({ b: 2 })
   })
 })

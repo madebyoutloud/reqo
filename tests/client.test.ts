@@ -166,7 +166,7 @@ describe('client', () => {
       duration: expect.any(Number),
       attempts: 1,
     })
-    // bodies are left out, toLog() includes them
+    // bodies are left out
     expect(json).not.toHaveProperty('responseBody')
   })
 
