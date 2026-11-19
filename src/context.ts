@@ -1,7 +1,8 @@
 import type { OptionalResponseType, Values, RequestConfig, RequestState, Response } from './types.js'
 import { responseTypes, streamTypes } from './constants.js'
 import { isFormData, isNativeClass } from './helpers.js'
-import { RequestError, type errors } from './errors.js'
+import type { errors } from './errors.js'
+import { buildQuery, buildUrl } from './url.js'
 
 export class Context implements RequestState {
   /** Aborted on cancel and after `totalTimeout` */
@@ -12,7 +13,10 @@ export class Context implements RequestState {
 
   stack?: string
 
-  startAt?: number
+  /** Time when the request was created */
+  readonly startAt = Date.now()
+  /** Number of attempts started */
+  attempts = 0
   /** Time when `totalTimeout` passes */
   deadlineAt?: number
   error?: errors['RequestError']
@@ -26,24 +30,7 @@ export class Context implements RequestState {
   }
 
   buildUrl() {
-    const urlWithParams = this.config.url.replace(/\{(\w+)\}/g, (_, name: string) => {
-      const value: unknown = this.config.params[name]
-
-      // a missing value would change the path, e.g. `DELETE /users/{id}` to `DELETE /users/`
-      if (value === undefined || value === null || value === '') {
-        throw new RequestError(this, { message: `Missing value for path parameter "${name}".` })
-      }
-
-      // encoded, so a value can't change the path or add a query, e.g. `../admin?x=`
-      return encodeURIComponent(String(value))
-    })
-    const url = new URL(urlWithParams)
-
-    for (const [key, value] of this.buildQuery(this.config.query)) {
-      url.searchParams.append(key, value)
-    }
-
-    return url
+    return buildUrl(this.config.url, this.config.params, this.config.query)
   }
 
   /** @param signal signal of the attempt */
@@ -98,7 +85,7 @@ export class Context implements RequestState {
 
     if (typeof body === 'object') {
       if (contentType.includes('application/x-www-form-urlencoded')) {
-        return this.buildQuery(body as Values)
+        return buildQuery(body as Values)
       }
 
       this.config.headers.set('content-type', 'application/json')
@@ -106,33 +93,5 @@ export class Context implements RequestState {
     }
 
     return body
-  }
-
-  private buildQuery(value: unknown, path?: string): [string, string][] {
-    if (value === null || value === undefined) {
-      return []
-    }
-
-    if (Array.isArray(value)) {
-      return value.flatMap((item) => {
-        // TODO: use this.buildQuery(item, `${path}[${i}]`) instead?
-        return this.buildQuery(item, `${path}[]`)
-      })
-    }
-
-    if (typeof value === 'object') {
-      return Object.entries(value)
-        .flatMap(([key, item]) => this.buildQuery(item, this.paramKey(key, path)))
-    }
-
-    if (!path) {
-      return []
-    }
-
-    return [[path, String(value)]]
-  }
-
-  private paramKey(key: string, path?: string) {
-    return path ? `${path}[${key}]` : key
   }
 }

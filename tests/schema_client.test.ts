@@ -1,11 +1,11 @@
 import { describe, expectTypeOf, it } from 'vitest'
-import { createSchemaClient } from '../src/index.js'
+import { createClient } from '../src/index.js'
 import type { SchemaErrorData, SchemaRequestOptions, SchemaResponseData } from '../src/index.js'
 import type { components, operations, paths } from './data/openapi.js'
 
 // `fetch` is resolved per call so msw can intercept. Binding `globalThis.fetch` at
 // construction would capture the unpatched one, this module runs before `server.listen()`.
-const api = createSchemaClient<paths>({
+const api = createClient<paths>({
   url: 'http://localhost',
   fetch: (input, init) => globalThis.fetch(input, init),
 })

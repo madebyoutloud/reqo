@@ -309,7 +309,7 @@ describe('retry', () => {
 
     expect(fn).toBeCalledTimes(2)
     expect(error).toBeInstanceOf(errors.RequestError)
-    expect((error as RequestError).status).toBe(-1)
+    expect((error as RequestError).status).toBeUndefined()
     expect((error as RequestError).response).toBeUndefined()
   })
 
@@ -511,7 +511,8 @@ describe('network error code', () => {
       retry: { delay: () => 10 },
     }))
 
-    expect((error as RequestError).code).toBe('')
+    expect((error as RequestError).code).toBe('E_NETWORK')
+    expect((error as RequestError).kind).toBe('network')
     expect(fetch).toBeCalledTimes(1)
   })
 

@@ -1,27 +1,20 @@
-/* eslint-disable @typescript-eslint/no-unsafe-declaration-merging */
-/* eslint-disable @typescript-eslint/no-empty-object-type */
-import type { Future } from '@outloud/future'
-
 import type {
   OptionalResponseType as ResponseType,
   RequestOptions as BaseRequestOptions,
-  ResponseOrData,
   Values,
 } from './types.js'
-import { BaseClient } from './base_client.js'
-import { shortcuts } from './client.js'
 
-type HttpMethod = 'get' | 'put' | 'post' | 'delete' | 'options' | 'head' | 'patch' | 'trace'
+export type HttpMethod = 'get' | 'put' | 'post' | 'delete' | 'options' | 'head' | 'patch' | 'trace'
 
 type FilterKeys<T, K> = T[keyof T & K]
-type MediaType = `${string}/${string}`
+export type MediaType = `${string}/${string}`
 
 /** Keys of `T` that are not optional. */
-type RequiredKeys<T> = Exclude<{
+export type RequiredKeys<T> = Exclude<{
   [K in keyof T]: T extends Record<K, T[K]> ? K : never;
 }[keyof T], undefined>
 
-type IsNever<T> = [T] extends [never] ? true : false
+export type IsNever<T> = [T] extends [never] ? true : false
 
 /**
  * Declares a parameter option based on its schema definition:
@@ -47,13 +40,13 @@ type BodyOption<Value> = IsNever<Value> extends true
     ? { data?: Exclude<Value, undefined> }
     : { data: Value }
 
-type PathsWithMethod<Paths extends {}, PathnameMethod extends HttpMethod> = {
+export type PathsWithMethod<Paths, PathnameMethod extends HttpMethod> = {
   [Pathname in keyof Paths]: Paths[Pathname] extends Record<PathnameMethod, any>
     ? Pathname
     : never;
 }[keyof Paths]
 
-type ResponseObjectMap<T> = T extends { responses: any } ? T['responses'] : unknown
+export type ResponseObjectMap<T> = T extends { responses: any } ? T['responses'] : unknown
 type Content<T> = T extends { content: any } ? T['content'] : unknown
 
 /** Parameters of the given kind (`path`, `query`, `header`, `cookie`) for an operation. */
@@ -101,7 +94,7 @@ type ErrorStatus<T> = Extract<{
     : K extends '4XX' | '5XX' | 'default' ? K : never;
 }[keyof T], keyof T>
 
-type SuccessResponse<
+export type SuccessResponse<
   T extends Record<string | number, any>,
   Media extends MediaType = MediaType,
 > = ResponseContent<T, Media, OkStatus<T>>
@@ -144,44 +137,9 @@ export type ErrorData<
   Media extends MediaType = MediaType,
 > = ErrorResponse<ResponseObjectMap<Definition[Path][Method]>, Media>
 
-type ClientMethod<
-  Definition extends Record<string, Record<HttpMethod, {}>>,
+/** The operation of a path for a method, e.g. `paths['/users']['get']`. */
+export type Operation<
+  Paths,
+  Path extends keyof Paths,
   Method extends HttpMethod,
-  ReturnData extends boolean = false,
-  Media extends MediaType = MediaType,
-> = <
-  Path extends PathsWithMethod<Definition, Method>,
-  Type extends ResponseType = ResponseType,
->(
-  url: Path,
-  ...options: IsNever<RequiredKeys<RequestOptions<Definition[Path][Method], Type>>> extends true
-    ? [options?: RequestOptions<Definition[Path][Method], Type>]
-    : [options: RequestOptions<Definition[Path][Method], Type>]
-) => Future<
-  ResponseOrData<
-    SuccessResponse<ResponseObjectMap<Definition[Path][Method]>, Media>,
-    Type,
-    ReturnData
-  >
->
-
-export interface SchemaClient<Definition extends Record<string, any>> {
-  head: ClientMethod<Definition, 'head'>
-  get: ClientMethod<Definition, 'get'>
-  post: ClientMethod<Definition, 'post'>
-  patch: ClientMethod<Definition, 'patch'>
-  put: ClientMethod<Definition, 'put'>
-  delete: ClientMethod<Definition, 'delete'>
-
-  $get: ClientMethod<Definition, 'get', true>
-  $put: ClientMethod<Definition, 'put', true>
-  $patch: ClientMethod<Definition, 'patch', true>
-  $post: ClientMethod<Definition, 'post', true>
-  $delete: ClientMethod<Definition, 'delete', true>
-}
-
-@shortcuts
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export class SchemaClient<Definition extends Record<string, any>> extends BaseClient {
-
-}
+> = Paths[Path] extends Record<Method, infer O extends Record<string, any>> ? O : never

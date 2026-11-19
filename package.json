@@ -42,7 +42,7 @@
     "build": "tsdown",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
-    "typecheck": "tsc --project tsconfig.build.json --noEmit",
+    "typecheck": "tsc --project tsconfig.test.json --noEmit",
     "release": "release-it"
   },
   "devDependencies": {

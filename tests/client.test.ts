@@ -157,15 +157,17 @@ describe('client', () => {
 
     expect(json).toEqual({
       client: 'test',
-      url: 'http://localhost/error',
+      url: 'http://localhost/error?test=1',
       method: 'GET',
-      code: '',
-      params: {},
-      query: { test: 1 },
+      kind: 'http',
+      code: 'E_HTTP',
       message: error?.message,
       status: 502,
-      data: { error: { message: 'Unknown error' } },
+      duration: expect.any(Number),
+      attempts: 1,
     })
+    // bodies are left out, toLog() includes them
+    expect(json).not.toHaveProperty('responseBody')
   })
 
   it('does not expose header values when serialized', async () => {

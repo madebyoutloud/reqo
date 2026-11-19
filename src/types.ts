@@ -1,6 +1,7 @@
 import type { errors } from './errors.js'
 import type { Headers } from './headers.js'
 import type { UserRetryOptions } from './retry.js'
+import type { Plugin } from './client.js'
 
 /** Decides whether a response is successful, runs before the body is read, so `response.data` is not set yet */
 export type ValidateFn = (response: Response) => boolean
@@ -55,8 +56,12 @@ export interface RequestConfig<
   D = any,
   Type extends OptionalResponseType = any,
 > {
-  /** Descriptive name for the client, will be used in errors */
+  /** Identifier of the client, from `ClientOptions.id` */
   id?: string
+  /** Human label of the client, from `ClientOptions.name` */
+  name?: string
+  /** Metadata of the client, a shallow copy of `ClientOptions.meta` */
+  meta?: ClientMeta
 
   url: string
   method: RequestMethod
@@ -110,8 +115,29 @@ export interface ErrorRequestState extends Omit<RequestState, 'error'> {
   retryAfter?: number
 }
 
+/**
+ * Open bag of client metadata for integrations, copied to `config.meta` of every request.
+ * Add typed keys by declaration merging:
+ *
+ * ```ts
+ * declare module '@outloud/reqo' {
+ *   interface ClientMeta {
+ *     expose?: boolean
+ *   }
+ * }
+ * ```
+ */
+export type ClientMeta = Record<string, unknown>
+
 export interface ClientOptions {
+  /** Identifier of the client, e.g. `aml`, used in errors, logs and hooks */
   id?: string
+  /** Human label of the client, e.g. `AML service`, used in errors, logs and hooks */
+  name?: string
+  /** Metadata for integrations, copied to `config.meta` of every request */
+  meta?: ClientMeta
+  /** Plugins applied when the client is created, see `client.use()` */
+  plugins?: Plugin[]
   /** @default globalThis.fetch, looked up on each request */
   fetch?: (input: string | URL | Request, init?: RequestInit) => Promise<globalThis.Response>
   redirect: RequestInit['redirect']

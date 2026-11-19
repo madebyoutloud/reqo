@@ -72,6 +72,8 @@ export class BaseClient extends Hooks {
 
     const context = new Context({
       id: this.options.id,
+      name: this.options.name,
+      meta: { ...this.options.meta },
       method,
       redirect: this.options.redirect,
       timeout: this.options.timeout,
@@ -153,7 +155,7 @@ export class BaseClient extends Hooks {
   }
 
   private async fetch<T, Type extends OptionalResponseType>(context: Context) {
-    context.startAt ??= Date.now()
+    context.attempts++
 
     // timeout applies to each attempt, retry waits are not counted,
     // it aborts only this attempt, so the request isn't aborted and the attempt can be retried
@@ -173,6 +175,8 @@ export class BaseClient extends Hooks {
 
     await this.hook('request', context.config, context)
 
+    const [url, init] = this.build(context, signal)
+
     try {
       // globalThis.fetch is looked up on each call, so a fetch replaced later (msw, instrumentation) is used,
       // called unbound, as browsers throw "Illegal invocation" when fetch is called on another object
@@ -181,10 +185,7 @@ export class BaseClient extends Hooks {
       // an aborted request is not sent, also with a custom fetch that ignores the signal
       signal.throwIfAborted()
 
-      const originalResponse = await fetch(
-        context.buildUrl(),
-        context.buildRequest(signal),
-      )
+      const originalResponse = await fetch(url, init)
 
       response = Object.assign(originalResponse, { data: undefined }) as Response<T, Type>
       context.response = response
@@ -206,7 +207,11 @@ export class BaseClient extends Hooks {
 
       // the body of a failed response is read best-effort
       if (valid) {
-        throw new errors.RequestError(context, { error: error as Error, message: 'Failed to process response data.' })
+        throw new errors.RequestError(context, {
+          error: error as Error,
+          kind: 'parse',
+          message: 'Failed to process response data.',
+        })
       }
     }
 
@@ -215,6 +220,15 @@ export class BaseClient extends Hooks {
     }
 
     return response
+  }
+
+  /** Builds the URL and init of fetch, e.g. a missing path parameter or a body that doesn't serialize fails here */
+  private build(context: Context, signal: AbortSignal): [URL, RequestInit] {
+    try {
+      return [context.buildUrl(), context.buildRequest(signal) as RequestInit]
+    } catch (error) {
+      throw new errors.RequestError(context, { error: error as Error, kind: 'invalid' })
+    }
   }
 
   private validate(response: Response) {
@@ -259,7 +273,7 @@ export class BaseClient extends Hooks {
           return response.text()
         }
 
-        return
+        return response.blob()
       default:
         throw new Error(`Invalid response type: ${type}`)
     }

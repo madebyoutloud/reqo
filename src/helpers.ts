@@ -1,7 +1,7 @@
 export function getNativeClass(value: unknown): string {
   // [object Class]
   return Object.prototype.toString.call(value)
-    .substring(8, -1)
+    .slice(8, -1)
 }
 
 export function isFormData(value: unknown): value is FormData {

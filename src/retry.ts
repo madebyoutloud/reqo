@@ -50,7 +50,7 @@ export function parseRetryAfter(response?: globalThis.Response): number | undefi
 }
 
 const delay: DelayFn = ({ retryCount, error, retryAfter }) => {
-  if (retryAfter !== undefined && retryAfterStatusCodes.includes(error.status)) {
+  if (retryAfter !== undefined && error.status !== undefined && retryAfterStatusCodes.includes(error.status)) {
     return retryAfter
   }
 
@@ -66,9 +66,9 @@ const validate: ValidateFn = ({ retryCount, error }, options) => {
     return false
   }
 
-  const status = error.response?.status ?? -1
+  const { status } = error
 
-  return options.statusCodes.includes(status) || options.codes.includes(error.code)
+  return (status !== undefined && options.statusCodes.includes(status)) || options.codes.includes(error.code)
 }
 
 const defaultOptions: RetryOptions = {
