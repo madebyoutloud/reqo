@@ -1,6 +1,6 @@
 import { describe, expectTypeOf, it } from 'vitest'
 import { Client, createClient, createSchemaClient, SchemaClient } from '../src/index.js'
-import type { ClientOptions, Plugin, RequestPromise, Untyped } from '../src/index.js'
+import type { ClientMeta, ClientOptions, Plugin, RequestPromise, Untyped } from '../src/index.js'
 import type { components, paths } from './data/openapi.js'
 
 // type tests only: requests are never awaited, `fetch` never resolves
@@ -181,5 +181,20 @@ describe('plugins', () => {
 
     takesAny(createClient())
     takesAny(createClient<paths>())
+  })
+})
+
+declare module '../src/index.js' {
+  interface ClientMeta {
+    expose?: boolean
+  }
+}
+
+describe('ClientMeta', () => {
+  it('takes typed keys by declaration merging', () => {
+    expectTypeOf<ClientMeta['expose']>().toEqualTypeOf<boolean | undefined>()
+    expectTypeOf(createClient).toBeCallableWith({ meta: { expose: true } })
+    // @ts-expect-error a typed key keeps its type
+    createClient({ meta: { expose: 'yes' } })
   })
 })

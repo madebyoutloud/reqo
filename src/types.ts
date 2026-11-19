@@ -138,7 +138,11 @@ export interface ErrorRequestState extends Omit<RequestState, 'error' | 'signal'
  * }
  * ```
  */
-export type ClientMeta = Record<string, unknown>
+// an interface, as a type alias can't be merged
+// eslint-disable-next-line @typescript-eslint/consistent-indexed-object-style
+export interface ClientMeta {
+  [key: string]: unknown
+}
 
 export interface ClientOptions {
   /** Identifier of the client, e.g. `aml`, used in errors, logs and hooks */
