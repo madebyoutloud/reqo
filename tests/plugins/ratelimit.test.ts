@@ -106,6 +106,42 @@ describe('rateLimit', () => {
   })
 })
 
+describe('rateLimit queue', () => {
+  it('rejects a canceled request right away, also behind another waiting one', async () => {
+    const { fetch, sent } = recorder()
+    const client = createClient({ url: 'http://localhost', fetch, plugins: [rateLimit({ limit: 1, interval: 500 })] })
+
+    const first = client.$get('/1')
+    const second = client.$get('/2')
+    const third = client.$get('/3')
+
+    await sleep(10)
+    const canceledAt = Date.now()
+    third.cancel()
+
+    const [, error] = await catchError(third)
+
+    expect(error).toBeInstanceOf(errors.CanceledError)
+    expect(Date.now() - canceledAt).toBeLessThan(50)
+    await Promise.all([first, second])
+    expect(sent.map(([path]) => path)).toEqual(['/1', '/2'])
+  })
+
+  it('rejects when totalTimeout passes behind another waiting request', async () => {
+    const { fetch } = recorder()
+    const client = createClient({ url: 'http://localhost', fetch, plugins: [rateLimit({ limit: 1, interval: 500 })] })
+
+    const first = client.$get('/1')
+    const second = client.$get('/2')
+    const startedAt = Date.now()
+    const [, error] = await catchError(client.$get('/3', { totalTimeout: 50 }))
+
+    expect(error).toBeInstanceOf(errors.TimeoutError)
+    expect(Date.now() - startedAt).toBeLessThan(150)
+    await Promise.all([first, second])
+  })
+})
+
 describe('RateLimit', () => {
   it('is a class instance that counts waiting requests', async () => {
     const { fetch } = recorder()

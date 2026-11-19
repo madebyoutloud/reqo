@@ -7,20 +7,11 @@ export interface RateLimitOptions {
   interval: number
 }
 
-/** Resolves after `ms`, rejects with the signal's reason as soon as it aborts */
-function wait(ms: number, signal: AbortSignal) {
-  return new Promise<void>((resolve, reject) => {
-    const onAbort = () => {
-      clearTimeout(timer)
-      reject(signal.reason)
-    }
-    const timer = setTimeout(() => {
-      signal.removeEventListener('abort', onAbort)
-      resolve()
-    }, ms)
-
-    signal.addEventListener('abort', onAbort, { once: true })
-  })
+/** An attempt waiting for its turn */
+interface Waiter {
+  resolve: () => void
+  signal: AbortSignal
+  onAbort: () => void
 }
 
 /**
@@ -42,8 +33,10 @@ export class RateLimit implements PluginObject {
 
   /** Start times of the attempts in the current window, oldest first, at most `limit` */
   #started: number[] = []
-  #queue = Promise.resolve()
-  #pending = 0
+  /** Attempts waiting for their turn, in order */
+  #waiters: Waiter[] = []
+  /** Wakes the waiters when the oldest attempt leaves the window */
+  #timer?: ReturnType<typeof setTimeout>
 
   constructor(options: RateLimitOptions) {
     const { limit, interval } = options
@@ -62,43 +55,61 @@ export class RateLimit implements PluginObject {
 
   /** Number of attempts waiting for their turn */
   get pending(): number {
-    return this.#pending
+    return this.#waiters.length
   }
 
   install(client: Client<any>): void {
     client.on('request', (_config, state) => this.acquire(state.signal))
   }
 
-  /** Waits until an attempt may start, in order, rejects with the signal's reason when it aborts */
+  /** Waits until an attempt may start, in order, rejects with the signal's reason as soon as it aborts */
   private acquire(signal: AbortSignal): Promise<void> {
-    this.#pending++
-
-    // one attempt decides at a time, so the order is kept, a rejected one doesn't stop the queue
-    const turn = this.#queue
-      .then(() => this.take(signal))
-      .finally(() => this.#pending--)
-
-    this.#queue = turn.catch(() => undefined)
-
-    return turn
-  }
-
-  private async take(signal: AbortSignal) {
-    while (true) {
-      signal.throwIfAborted()
-
-      const now = Date.now()
-
-      while (this.#started.length > 0 && this.#started[0]! <= now - this.interval) {
-        this.#started.shift()
-      }
-
-      if (this.#started.length < this.limit) {
-        this.#started.push(now)
+    return new Promise((resolve, reject) => {
+      if (signal.aborted) {
+        reject(signal.reason)
         return
       }
 
-      await wait(this.#started[0]! + this.interval - now, signal)
+      const waiter: Waiter = {
+        resolve,
+        signal,
+        // leaves the queue right away, wherever it is in it
+        onAbort: () => {
+          this.#waiters.splice(this.#waiters.indexOf(waiter), 1)
+          reject(signal.reason)
+
+          if (this.#waiters.length === 0) {
+            clearTimeout(this.#timer)
+          }
+        },
+      }
+
+      signal.addEventListener('abort', waiter.onAbort, { once: true })
+      this.#waiters.push(waiter)
+      this.drain()
+    })
+  }
+
+  /** Starts as many waiters as the window allows, then waits for the oldest attempt to leave it */
+  private drain() {
+    clearTimeout(this.#timer)
+
+    const now = Date.now()
+
+    while (this.#started.length > 0 && this.#started[0]! <= now - this.interval) {
+      this.#started.shift()
+    }
+
+    while (this.#waiters.length > 0 && this.#started.length < this.limit) {
+      const waiter = this.#waiters.shift()!
+
+      waiter.signal.removeEventListener('abort', waiter.onAbort)
+      this.#started.push(now)
+      waiter.resolve()
+    }
+
+    if (this.#waiters.length > 0) {
+      this.#timer = setTimeout(() => this.drain(), this.#started[0]! + this.interval - now)
     }
   }
 }
