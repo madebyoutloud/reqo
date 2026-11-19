@@ -19,6 +19,7 @@ export type {
   Response,
   ClientOptions,
   ClientMeta,
+  HeadersInput,
 } from './types.js'
 
 export type {

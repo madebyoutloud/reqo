@@ -1,6 +1,7 @@
 import type {
   OptionalResponseType as ResponseType,
   RequestOptions as BaseRequestOptions,
+  HeadersInput,
   Values,
 } from './types.js'
 
@@ -109,7 +110,7 @@ type ErrorResponse<
  * Always optional, headers may also be set on the client or in a hook.
  */
 type HeaderOption<T> = IsNever<Exclude<ParametersOf<T, 'header'>, undefined>> extends true
-  ? { headers?: Values }
+  ? { headers?: HeadersInput }
   : { headers?: Partial<Exclude<ParametersOf<T, 'header'>, undefined>> & Values }
 
 export type RequestOptions<

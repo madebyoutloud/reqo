@@ -338,6 +338,34 @@ describe('response body', () => {
     expect(error?.cause).toBeInstanceOf(SyntaxError)
   })
 
+  it.each([
+    ['a Headers instance', new globalThis.Headers({ authorization: 'Bearer x' })],
+    ['entries', [['authorization', 'Bearer x']] as [string, string][]],
+    ['an object', { authorization: 'Bearer x' }],
+  ])('sends headers given as %s', async (_, headers) => {
+    const fetch = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => Response.json({}))
+
+    await createClient({ url: 'http://localhost', fetch, headers }).get('/')
+    await createClient({ url: 'http://localhost', fetch }).get('/', { headers })
+
+    for (const [, init] of fetch.mock.calls) {
+      expect(init?.headers).toMatchObject({ authorization: 'Bearer x' })
+    }
+  })
+
+  it('overrides client headers by request headers, whatever the case of the name', async () => {
+    const fetch = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => Response.json({}))
+    const api = createClient({
+      url: 'http://localhost',
+      fetch,
+      headers: { 'Authorization': 'Bearer client', 'X-Removed': '1' },
+    })
+
+    await api.get('/', { headers: { 'authorization': 'Bearer request', 'x-removed': null } })
+
+    expect(fetch.mock.calls[0]![1]!.headers).toEqual({ accept: 'application/json', authorization: 'Bearer request' })
+  })
+
   it('sends an object as a form-urlencoded body', async () => {
     const fetch = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => Response.json({}))
 

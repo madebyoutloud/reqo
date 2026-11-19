@@ -84,10 +84,8 @@ export class BaseClient extends Hooks {
       url: this.getUrl(url),
       params: params ?? {},
       query: query ?? {},
-      headers: new Headers({
-        ...this.options.headers,
-        ...headers,
-      }),
+      // request headers override client headers, also when the case of a name differs
+      headers: new Headers(this.options.headers).set(headers ?? {}, true),
       signal: this.signal(signal),
       ...rest,
     })

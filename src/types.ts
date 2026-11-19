@@ -10,6 +10,9 @@ export type Values = Record<string, any>
 
 export type MaybePromise<T> = T | PromiseLike<T>
 
+/** Headers as an object, a `Headers` instance or `[name, value]` entries; a `null` or `undefined` value removes the header */
+export type HeadersInput = Values | Iterable<readonly [string, unknown]>
+
 export type ResponseType = 'arrayBuffer' | 'blob' | 'json' | 'text' | 'auto'
 export type OptionalResponseType = ResponseType | false
 export type RequestMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS' | 'TRACE'
@@ -32,7 +35,8 @@ export interface RequestOptions<
 
   params?: Values
   query?: Values
-  headers?: Values
+  /** Merged over the headers of the client, names are case-insensitive */
+  headers?: HeadersInput
 
   /** @default 'follow' */
   redirect?: RequestInit['redirect']
@@ -150,7 +154,7 @@ export interface ClientOptions {
   redirect: RequestInit['redirect']
   timeout: number | false
   totalTimeout?: number | false
-  headers?: Values
+  headers?: HeadersInput
   url?: string
   validate?: ValidateFn
   retry: UserRetryOptions | boolean

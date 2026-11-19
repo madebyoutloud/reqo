@@ -1,9 +1,9 @@
-import type { Values } from './types.js'
+import type { HeadersInput } from './types.js'
 
 export class Headers {
   private values = new Map<string, string>()
 
-  constructor(values?: Values) {
+  constructor(values?: HeadersInput) {
     values && this.set(values)
   }
 
@@ -12,13 +12,17 @@ export class Headers {
   }
 
   set(name: string, value: unknown, override?: boolean): this
-  set(values: Values, override?: boolean): this
-  set(values: string | Values, ...args: any[]): this {
+  set(values: HeadersInput, override?: boolean): this
+  set(values: string | HeadersInput, ...args: any[]): this {
     if (typeof values === 'object') {
-      Object.entries(values)
-        .forEach(([name, value]) => {
-          this.set(name, value, args[0])
-        })
+      // a `Headers` instance and entries are iterable, a plain object is not
+      const entries = Symbol.iterator in values
+        ? values as Iterable<readonly [string, unknown]>
+        : Object.entries(values)
+
+      for (const [name, value] of entries) {
+        this.set(name, value, args[0])
+      }
 
       return this
     }
