@@ -81,7 +81,8 @@ describe('retry', () => {
 
     const startAt = Date.now()
     const [,error] = await catchError(client.get('/retry', {
-      retry: { delay: () => 50 },
+      // the timed out second attempt is the last one
+      retry: { delay: () => 50, limit: 1 },
       timeout: 100,
     }))
     const elapsed = Date.now() - startAt
@@ -91,6 +92,85 @@ describe('retry', () => {
     // 50 ms wait + 100 ms for the second attempt
     expect(elapsed).toBeGreaterThanOrEqual(140)
     expect(elapsed).toBeLessThan(500)
+  })
+
+  it('retries an attempt that timed out', async () => {
+    const fn = vi.fn()
+
+    server.use(
+      http.get('http://localhost/retry', async () => {
+        fn()
+
+        if (fn.mock.calls.length === 1) {
+          await setTimeout(1000)
+        }
+
+        return HttpResponse.json({ ok: true })
+      }),
+    )
+
+    const startAt = Date.now()
+    const data = await client.$get('/retry', {
+      retry: { delay: () => 10 },
+      timeout: 200,
+    })
+
+    expect(data).toEqual({ ok: true })
+    expect(fn).toBeCalledTimes(2)
+    expect(Date.now() - startAt).toBeLessThan(800)
+  })
+
+  it('stops retrying timed out attempts when request is canceled', async () => {
+    const fn = vi.fn()
+
+    server.use(
+      http.get('http://localhost/retry', async () => {
+        fn()
+        await setTimeout(1000)
+
+        return HttpResponse.json({ ok: true })
+      }),
+    )
+
+    const request = client.get('/retry', {
+      retry: { delay: () => 10, limit: 5 },
+      timeout: 100,
+    })
+
+    globalThis.setTimeout(() => request.cancel(), 150)
+
+    const [,error] = await catchError(request)
+
+    expect(error).toBeInstanceOf(errors.CanceledError)
+    expect(fn).toBeCalledTimes(2)
+  })
+
+  it('stops retrying timed out attempts after totalTimeout', async () => {
+    const fn = vi.fn()
+
+    server.use(
+      http.get('http://localhost/retry', async () => {
+        fn()
+        await setTimeout(1000)
+
+        return HttpResponse.json({ ok: true })
+      }),
+    )
+
+    const startAt = Date.now()
+    const [,error] = await catchError(client.get('/retry', {
+      retry: { delay: () => 10, limit: 5 },
+      timeout: 100,
+      totalTimeout: 250,
+    }))
+    const elapsed = Date.now() - startAt
+
+    expect(error).toBeInstanceOf(errors.TimeoutError)
+    // the per attempt timeout is kept as cause
+    expect(error?.cause).toBeInstanceOf(errors.TimeoutError)
+    expect(fn).toBeCalledTimes(3)
+    expect(elapsed).toBeGreaterThanOrEqual(240)
+    expect(elapsed).toBeLessThan(450)
   })
 
   it('derives delay from Retry-After header', async () => {

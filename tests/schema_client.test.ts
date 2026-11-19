@@ -10,6 +10,9 @@ const api = createSchemaClient<paths>({
   fetch: (input, init) => globalThis.fetch(input, init),
 })
 
+// calls without a required path parameter reject before sending
+const ignore = () => undefined
+
 describe('schema client paths', () => {
   it('only accepts paths supporting the method', () => {
     expectTypeOf(api.$get).parameter(0)
@@ -40,11 +43,11 @@ describe('schema client options', () => {
 
   it('requires options when the operation has required params', () => {
     // @ts-expect-error params are required
-    api.$get('/special-events/{eventId}')
+    api.$get('/special-events/{eventId}').catch(ignore)
     // @ts-expect-error params are required
-    api.$get('/special-events/{eventId}', {})
+    api.$get('/special-events/{eventId}', {}).catch(ignore)
     // @ts-expect-error eventId is required
-    api.$get('/special-events/{eventId}', { params: {} })
+    api.$get('/special-events/{eventId}', { params: {} }).catch(ignore)
 
     api.$get('/special-events/{eventId}', { params: { eventId: '1' } })
   })
@@ -62,7 +65,7 @@ describe('schema client options', () => {
     // @ts-expect-error data is required
     api.$patch('/special-events/{eventId}', { params: { eventId: '1' } })
     // @ts-expect-error params are required
-    api.$patch('/special-events/{eventId}', { data: { name: 'x' } })
+    api.$patch('/special-events/{eventId}', { data: { name: 'x' } }).catch(ignore)
 
     api.$patch('/special-events/{eventId}', { params: { eventId: '1' }, data: { name: 'x' } })
   })

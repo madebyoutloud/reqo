@@ -100,8 +100,8 @@ export function toRequestError(context: Context, error: unknown): RequestError {
 }
 
 /**
- * Converts the reason of an aborted user signal to an error,
- * `TimeoutError` for `AbortSignal.timeout()`, `CanceledError` otherwise.
+ * Converts the reason of an aborted signal to an error: a `RequestError` as is (cancel, `totalTimeout`),
+ * `TimeoutError` for `AbortSignal.timeout()` (`timeout` or a user signal), `CanceledError` otherwise.
  */
 export function abortError(context: Context, reason: unknown): RequestError {
   if (reason instanceof RequestError) {

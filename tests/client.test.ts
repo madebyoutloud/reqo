@@ -274,7 +274,7 @@ describe('client signal', () => {
     expect(error?.cause).toBe(controller.signal.reason)
   })
 
-  it('removes client signal listener when request ends', async () => {
+  it('leaves no listener on client signal when request ends', async () => {
     const controller = new AbortController()
     const add = vi.spyOn(controller.signal, 'addEventListener')
     const remove = vi.spyOn(controller.signal, 'removeEventListener')
@@ -283,7 +283,56 @@ describe('client signal', () => {
     await signalClient.get('/json')
     await catchError(signalClient.get('/error'))
 
-    expect(add).toBeCalledTimes(2)
     expect(remove.mock.calls).toEqual(add.mock.calls.map(([type, listener]) => [type, listener]))
+  })
+})
+
+describe('path params', () => {
+  it('encodes params', async () => {
+    const fetch = vi.fn(async (_input: string | URL | Request) => Response.json({}))
+
+    await createClient({ url: 'http://localhost', fetch }).get('/users/{id}', {
+      params: { id: '../admin?x=1#y' },
+    })
+
+    expect(String(fetch.mock.calls[0]![0])).toBe('http://localhost/users/..%2Fadmin%3Fx%3D1%23y')
+  })
+
+  it.each([undefined, null, ''])('throws before sending when a param is %o', async (id) => {
+    const fetch = vi.fn(async () => Response.json({}))
+
+    const [, error] = await catchError(createClient({ url: 'http://localhost', fetch }).delete('/users/{id}', {
+      params: { id },
+    }))
+
+    expect(error).toBeInstanceOf(errors.RequestError)
+    expect(error?.message).toBe('Missing value for path parameter "id".')
+    expect(fetch).not.toBeCalled()
+  })
+})
+
+describe('response body', () => {
+  it('throws status error when error body does not parse', async () => {
+    const fetch = vi.fn(async () => new Response('<html>Bad Gateway</html>', {
+      status: 502,
+      headers: { 'content-type': 'application/json' },
+    }))
+
+    const [, error] = await catchError(createClient({ url: 'http://localhost', fetch }).get('/error'))
+
+    expect(error).toBeInstanceOf(errors.RequestError)
+    expect(error).toMatchObject({ message: 'Request failed with status code 502.', status: 502 })
+  })
+
+  it('throws parse error when success body does not parse', async () => {
+    const fetch = vi.fn(async () => new Response('<html></html>', {
+      headers: { 'content-type': 'application/json' },
+    }))
+
+    const [, error] = await catchError(createClient({ url: 'http://localhost', fetch }).get('/json'))
+
+    expect(error).toBeInstanceOf(errors.RequestError)
+    expect(error).toMatchObject({ message: 'Failed to process response data.', status: 200 })
+    expect(error?.cause).toBeInstanceOf(SyntaxError)
   })
 })

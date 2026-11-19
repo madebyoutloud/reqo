@@ -5,7 +5,7 @@ import type {
   OptionalResponseType,
   ClientOptions,
 } from './types.js'
-import { errors, toRequestError } from './errors.js'
+import { abortError, errors, toRequestError } from './errors.js'
 import { Context } from './context.js'
 import { Retry } from './retry.js'
 import { Hooks } from './hooks.js'
@@ -99,10 +99,7 @@ export class BaseClient extends Hooks {
       this.$request<T, Type>(context),
       () => context.controller.abort(new errors.CanceledError(context)),
     )
-      .finally(() => {
-        timeoutId && clearTimeout(timeoutId)
-        context.dispose()
-      })
+      .finally(() => timeoutId && clearTimeout(timeoutId))
   }
 
   /** Combines the client signal with the request signal, either aborts the request. */
@@ -158,19 +155,20 @@ export class BaseClient extends Hooks {
   private async fetch<T, Type extends OptionalResponseType>(context: Context) {
     context.startAt ??= Date.now()
 
-    // timeout applies to each attempt, retry waits are not counted
-    const timeoutId = this.timeout(context)
+    // timeout applies to each attempt, retry waits are not counted,
+    // it aborts only this attempt, so the request isn't aborted and the attempt can be retried
+    const { timeout } = context.config
+    const signal = timeout ? AbortSignal.any([context.signal, AbortSignal.timeout(timeout)]) : context.signal
 
     try {
-      return await this.attempt<T, Type>(context)
+      return await this.attempt<T, Type>(context, signal)
     } finally {
-      timeoutId && clearTimeout(timeoutId)
       // errors created later, e.g. during retry waits, don't get the response of this attempt
       context.response = undefined
     }
   }
 
-  private async attempt<T, Type extends OptionalResponseType>(context: Context) {
+  private async attempt<T, Type extends OptionalResponseType>(context: Context, signal: AbortSignal) {
     let response: Response<T, Type>
 
     await this.hook('request', context.config, context)
@@ -181,33 +179,39 @@ export class BaseClient extends Hooks {
       const fetch = this.options.fetch ?? globalThis.fetch
 
       // an aborted request is not sent, also with a custom fetch that ignores the signal
-      context.controller.signal.throwIfAborted()
+      signal.throwIfAborted()
 
       const originalResponse = await fetch(
         context.buildUrl(),
-        context.buildRequest(),
+        context.buildRequest(signal),
       )
 
       response = Object.assign(originalResponse, { data: undefined }) as Response<T, Type>
       context.response = response
     } catch (error) {
-      throw toRequestError(context, error)
+      throw signal.aborted ? abortError(context, signal.reason) : toRequestError(context, error)
     }
+
+    // the status is checked before the body is read, so a body that doesn't parse,
+    // e.g. an HTML 502 page, doesn't hide it
+    const valid = this.validate(response)
 
     try {
-      const data = await this.processResponse(response, context.config.responseType)
-      response.data = data as any
+      response.data = await this.processResponse(response, context.config.responseType) as any
     } catch (error) {
-      throw new errors.RequestError(context, {
-        error: error as Error,
-        message: 'Failed to process response data.',
-      })
+      // aborted while reading the body
+      if (signal.aborted) {
+        throw abortError(context, signal.reason)
+      }
+
+      // the body of a failed response is read best-effort
+      if (valid) {
+        throw new errors.RequestError(context, { error: error as Error, message: 'Failed to process response data.' })
+      }
     }
 
-    if (!this.validate(response)) {
-      throw new errors.RequestError(context, {
-        message: `Request failed with status code ${response.status}.`,
-      })
+    if (!valid) {
+      throw new errors.RequestError(context, { message: `Request failed with status code ${response.status}.` })
     }
 
     return response
@@ -215,16 +219,6 @@ export class BaseClient extends Hooks {
 
   private validate(response: Response) {
     return this.options.validate?.(response) ?? response.ok
-  }
-
-  private timeout(context: Context) {
-    if (!context.config.timeout) {
-      return
-    }
-
-    return setTimeout(() => {
-      context.controller.abort(new errors.TimeoutError(context))
-    }, context.config.timeout)
   }
 
   private totalTimeout(context: Context) {

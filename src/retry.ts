@@ -1,5 +1,5 @@
 import type { Context } from './context.js'
-import { errors, toRequestError } from './errors.js'
+import { abortError, errors } from './errors.js'
 import type { ErrorRequestState, RequestMethod } from './types.js'
 
 export type DelayFn = (state: ErrorRequestState) => number
@@ -75,7 +75,8 @@ const defaultOptions: RetryOptions = {
   limit: 2,
   methods: ['GET', 'HEAD', 'OPTIONS'],
   statusCodes: [408, 429, 500, 502, 503, 504, 520, 521, 522, 523, 524, 525, 526, 530],
-  codes: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND', 'ECONNREFUSED', 'UND_ERR_SOCKET'],
+  // E_TIMEOUT is an attempt that passed `timeout`, an aborted request (cancel, `totalTimeout`) is never retried
+  codes: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND', 'ECONNREFUSED', 'UND_ERR_SOCKET', 'E_TIMEOUT'],
   delay,
   maxDelay: 60_000,
   validate,
@@ -101,7 +102,7 @@ export class Retry {
         context.retryAfter = error instanceof errors.RequestError ? parseRetryAfter(error.response) : undefined
 
         if (!(error instanceof errors.RequestError) ||
-          context.controller.signal.aborted ||
+          context.signal.aborted ||
           !this.validate(context)
         ) {
           throw error
@@ -125,13 +126,13 @@ export class Retry {
 
   /** Waits before the next attempt, rejects as soon as the request is aborted. */
   private wait(delayMs: number, context: Context) {
-    const { signal } = context.controller
+    const { signal } = context
 
     return new Promise<void>((resolve, reject) => {
       const onAbort = () => {
         clearTimeout(timeoutId)
         // same error as an abort during fetch
-        reject(toRequestError(context, signal.reason))
+        reject(abortError(context, signal.reason))
       }
 
       const timeoutId = setTimeout(() => {

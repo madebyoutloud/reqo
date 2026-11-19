@@ -2,6 +2,7 @@ import type { errors } from './errors.js'
 import type { Headers } from './headers.js'
 import type { UserRetryOptions } from './retry.js'
 
+/** Decides whether a response is successful, runs before the body is read, so `response.data` is not set yet */
 export type ValidateFn = (response: Response) => boolean
 
 export type Values = Record<string, any>

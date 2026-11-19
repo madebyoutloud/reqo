@@ -1,10 +1,13 @@
 import type { OptionalResponseType, Values, RequestConfig, RequestState, Response } from './types.js'
 import { responseTypes, streamTypes } from './constants.js'
 import { isFormData, isNativeClass } from './helpers.js'
-import { abortError, type errors } from './errors.js'
+import { RequestError, type errors } from './errors.js'
 
 export class Context implements RequestState {
-  readonly controller: AbortController
+  /** Aborted on cancel and after `totalTimeout` */
+  readonly controller = new AbortController()
+  /** Aborts the request: the controller, or the signal of the request or client */
+  readonly signal: AbortSignal
   response?: Response
 
   stack?: string
@@ -16,34 +19,24 @@ export class Context implements RequestState {
   retryCount = 0
   retryAfter?: number
 
-  private onAbort?: () => void
-
   constructor(public config: RequestConfig) {
-    this.controller = new AbortController()
+    const { signal } = config
 
-    const { signal } = this.config
-
-    if (signal?.aborted) {
-      this.controller.abort(abortError(this, signal.reason))
-    } else if (signal) {
-      this.onAbort = () => {
-        this.controller.abort(abortError(this, signal.reason))
-      }
-
-      signal.addEventListener('abort', this.onAbort, { once: true })
-    }
-  }
-
-  /** Stops listening to the signal, a client signal outlives its requests. */
-  dispose() {
-    if (this.onAbort) {
-      this.config.signal?.removeEventListener('abort', this.onAbort)
-      this.onAbort = undefined
-    }
+    this.signal = signal ? AbortSignal.any([this.controller.signal, signal]) : this.controller.signal
   }
 
   buildUrl() {
-    const urlWithParams = this.config.url.replace(/\{(\w+)\}/g, (_, name) => this.config.params[name] ?? '')
+    const urlWithParams = this.config.url.replace(/\{(\w+)\}/g, (_, name: string) => {
+      const value: unknown = this.config.params[name]
+
+      // a missing value would change the path, e.g. `DELETE /users/{id}` to `DELETE /users/`
+      if (value === undefined || value === null || value === '') {
+        throw new RequestError(this, { message: `Missing value for path parameter "${name}".` })
+      }
+
+      // encoded, so a value can't change the path or add a query, e.g. `../admin?x=`
+      return encodeURIComponent(String(value))
+    })
     const url = new URL(urlWithParams)
 
     for (const [key, value] of this.buildQuery(this.config.query)) {
@@ -53,7 +46,8 @@ export class Context implements RequestState {
     return url
   }
 
-  buildRequest() {
+  /** @param signal signal of the attempt */
+  buildRequest(signal: AbortSignal) {
     if (!this.config.headers.has('accept')) {
       const accept = this.detectAccept(this.config.responseType)
       this.config.headers.set('accept', accept)
@@ -64,7 +58,7 @@ export class Context implements RequestState {
     return {
       method: this.config.method,
       headers: this.config.headers.toObject(),
-      signal: this.controller.signal,
+      signal,
       redirect: this.config.redirect,
       credentials: this.config.credentials,
       mode: this.config.mode,
