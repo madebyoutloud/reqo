@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createClient, errors } from '../../src/index.js'
-import { rateLimit } from '../../src/plugins/ratelimit.js'
+import { RateLimit, rateLimit } from '../../src/plugins/ratelimit.js'
 import { catchError } from '../helpers.js'
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -102,5 +102,25 @@ describe('rateLimit', () => {
     { limit: 1, interval: Number.NaN },
   ])('rejects invalid options %o', (options) => {
     expect(() => rateLimit(options)).toThrow(TypeError)
+    expect(() => new RateLimit(options)).toThrow(TypeError)
+  })
+})
+
+describe('RateLimit', () => {
+  it('is a class instance that counts waiting requests', async () => {
+    const { fetch } = recorder()
+    const limiter = rateLimit({ limit: 1, interval: 100 })
+    const client = createClient({ url: 'http://localhost', fetch, plugins: [limiter] })
+
+    expect(limiter).toBeInstanceOf(RateLimit)
+    expect(limiter.pending).toBe(0)
+
+    const requests = Promise.all([client.$get('/1'), client.$get('/2'), client.$get('/3')])
+
+    await sleep(10)
+    expect(limiter.pending).toBe(2)
+
+    await requests
+    expect(limiter.pending).toBe(0)
   })
 })

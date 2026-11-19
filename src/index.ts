@@ -3,7 +3,7 @@ import type { ClientOptions } from './types.js'
 
 export { BaseClient } from './base_client.js'
 export { Client } from './client.js'
-export type { Untyped, Plugin, ClientMethod, UntypedMethod, SchemaMethod } from './client.js'
+export type { Untyped, Plugin, PluginFn, PluginObject, ClientMethod, UntypedMethod, SchemaMethod } from './client.js'
 
 export { RequestPromise } from './request_promise.js'
 export type { SafeResult } from './request_promise.js'

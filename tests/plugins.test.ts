@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { Client, createClient } from '../src/index.js'
-import type { Plugin } from '../src/index.js'
+import type { Plugin, PluginFn, PluginObject } from '../src/index.js'
 
 const auth: Plugin = (client) => {
   client.on('request', (config) => {
@@ -31,10 +31,38 @@ describe('plugins', () => {
   })
 
   it('passes the client to the plugin', () => {
-    const plugin = vi.fn<Parameters<Plugin>, ReturnType<Plugin>>()
+    const plugin = vi.fn<Parameters<PluginFn>, ReturnType<PluginFn>>()
     const client = createClient().use(plugin)
 
     expect(plugin).toBeCalledWith(client)
+  })
+
+  it('installs an object plugin', () => {
+    const plugin = { install: vi.fn() }
+    const client = createClient({ plugins: [plugin] })
+
+    expect(plugin.install).toBeCalledWith(client)
+  })
+
+  it('installs a class plugin with its state', async () => {
+    class Counter implements PluginObject {
+      count = 0
+
+      install(client: Client<any>) {
+        client.on('request', () => {
+          this.count++
+        })
+      }
+    }
+
+    const counter = new Counter()
+    const fetch = async () => Response.json({})
+    const client = createClient({ url: 'http://localhost', fetch }).use(counter)
+
+    await client.get('/a')
+    await client.get('/b')
+
+    expect(counter.count).toBe(2)
   })
 })
 

@@ -1,4 +1,4 @@
-import type { Plugin } from '../client.js'
+import type { Client, PluginObject } from '../client.js'
 
 export interface RateLimitOptions {
   /** Most attempts that may start per `interval` */
@@ -28,54 +28,82 @@ function wait(ms: number, signal: AbortSignal) {
  * Retries count, as every attempt runs the `request` hooks. The wait counts against `totalTimeout`, not `timeout`,
  * and a canceled request leaves the queue right away.
  *
- * The state lives in the returned plugin: pass the same one to several clients to share the limit.
+ * The state lives in the instance: install the same one on several clients to share the limit.
  * It's per process, use a shared store (e.g. Redis) to limit several instances of an app.
  *
  * ```ts
- * const api = createClient({ url, plugins: [rateLimit({ limit: 100, interval: 60_000 })] })
+ * const limiter = new RateLimit({ limit: 100, interval: 60_000 })
+ * const api = createClient({ url, plugins: [limiter] })
  * ```
  */
-export function rateLimit(options: RateLimitOptions): Plugin {
-  const { limit, interval } = options
-
-  if (!Number.isInteger(limit) || limit < 1) {
-    throw new TypeError(`rateLimit: limit must be a positive integer, got ${limit}.`)
-  }
-
-  if (!(interval > 0)) {
-    throw new TypeError(`rateLimit: interval must be a positive number, got ${interval}.`)
-  }
+export class RateLimit implements PluginObject {
+  readonly limit: number
+  readonly interval: number
 
   /** Start times of the attempts in the current window, oldest first, at most `limit` */
-  const started: number[] = []
-  let queue = Promise.resolve()
+  #started: number[] = []
+  #queue = Promise.resolve()
+  #pending = 0
 
-  const acquire = async (signal: AbortSignal) => {
+  constructor(options: RateLimitOptions) {
+    const { limit, interval } = options
+
+    if (!Number.isInteger(limit) || limit < 1) {
+      throw new TypeError(`rateLimit: limit must be a positive integer, got ${limit}.`)
+    }
+
+    if (!(interval > 0)) {
+      throw new TypeError(`rateLimit: interval must be a positive number, got ${interval}.`)
+    }
+
+    this.limit = limit
+    this.interval = interval
+  }
+
+  /** Number of attempts waiting for their turn */
+  get pending(): number {
+    return this.#pending
+  }
+
+  install(client: Client<any>): void {
+    client.on('request', (_config, state) => this.acquire(state.signal))
+  }
+
+  /** Waits until an attempt may start, in order, rejects with the signal's reason when it aborts */
+  private acquire(signal: AbortSignal): Promise<void> {
+    this.#pending++
+
+    // one attempt decides at a time, so the order is kept, a rejected one doesn't stop the queue
+    const turn = this.#queue
+      .then(() => this.take(signal))
+      .finally(() => this.#pending--)
+
+    this.#queue = turn.catch(() => undefined)
+
+    return turn
+  }
+
+  private async take(signal: AbortSignal) {
     while (true) {
       signal.throwIfAborted()
 
       const now = Date.now()
 
-      while (started.length > 0 && started[0]! <= now - interval) {
-        started.shift()
+      while (this.#started.length > 0 && this.#started[0]! <= now - this.interval) {
+        this.#started.shift()
       }
 
-      if (started.length < limit) {
-        started.push(now)
+      if (this.#started.length < this.limit) {
+        this.#started.push(now)
         return
       }
 
-      await wait(started[0]! + interval - now, signal)
+      await wait(this.#started[0]! + this.interval - now, signal)
     }
   }
+}
 
-  return (client) => {
-    client.on('request', (_config, state) => {
-      // one request decides at a time, so the order is kept, a rejected one doesn't stop the queue
-      const turn = queue.then(() => acquire(state.signal))
-      queue = turn.catch(() => undefined)
-
-      return turn
-    })
-  }
+/** Creates a `RateLimit` plugin, see `RateLimit` */
+export function rateLimit(options: RateLimitOptions): RateLimit {
+  return new RateLimit(options)
 }

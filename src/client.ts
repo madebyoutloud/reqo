@@ -28,9 +28,16 @@ export interface Untyped {
   readonly [untyped]: true
 }
 
-/** Adds behaviour to a client, e.g. hooks for auth or error normalization. */
+/** A plugin as a function, gets the client */
+export type PluginFn = (client: Client<any>) => void
 
-export type Plugin = (client: Client<any>) => void
+/** A plugin as an object, e.g. a class instance that keeps state */
+export interface PluginObject {
+  install: (client: Client<any>) => void
+}
+
+/** Adds behaviour to a client, e.g. hooks for auth or error normalization: a function or an object with `install()`. */
+export type Plugin = PluginFn | PluginObject
 
 type IsAny<T> = 0 extends 1 & T ? true : false
 
@@ -112,7 +119,11 @@ export class Client<Paths = Untyped> extends BaseClient {
 
   /** Applies a plugin to the client, returns the client. */
   use(plugin: Plugin): this {
-    plugin(this)
+    if (typeof plugin === 'function') {
+      plugin(this)
+    } else {
+      plugin.install(this)
+    }
 
     return this
   }
