@@ -1,37 +1,42 @@
-variables:
-  PIPELINE:
-    description: 'Specify which pipeline to run'
-    value: docs
-    options: [publish, docs]
-
+spec:
+  inputs:
+    action:
+      description: What to run, auto runs what the branch or tag runs
+      default: auto
+      options: [auto, publish, docs]
+---
 stages: [test, build, deploy, publish]
 
 include:
+  - component: $OUTLOUD_CI/workflow@5
+    inputs:
+      action: $[[ inputs.action ]]
+
   # test
-  - component: $OUTLOUD_CI/test-nodejs@4
+  - component: $OUTLOUD_CI/test-nodejs@5
     inputs:
       name: lint
       command: lint
-  - component: $OUTLOUD_CI/test-nodejs@4
+  - component: $OUTLOUD_CI/test-nodejs@5
     inputs:
       name: typecheck
       command: typecheck
-  - component: $OUTLOUD_CI/test-nodejs@4
+  - component: $OUTLOUD_CI/test-nodejs@5
     inputs:
       name: test
       command: test
 
-  - component: $OUTLOUD_CI/publish-npm@4
+  - component: $OUTLOUD_CI/publish-npm@5
     inputs:
       registry: [npm, gitlab]
 
-  - component: $OUTLOUD_CI/build-nodejs@4
+  - component: $OUTLOUD_CI/build-nodejs@5
     inputs:
       rules:
-        - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+        - if: !reference [.rules, default_branch]
           changes:
             - docs/**/*
-        - if: $CI_PIPELINE_SOURCE == "web" && $PIPELINE == "docs"
+        - if: $RUN_ACTION == "docs"
       script:
         - |
           cd docs
@@ -42,7 +47,7 @@ include:
         - docs/.output
         - docs/.wrangler
 
-  - component: $OUTLOUD_CI/deploy-cloudflare@4
+  - component: $OUTLOUD_CI/deploy-cloudflare@5
     inputs:
       environment: production
       script:
@@ -50,7 +55,7 @@ include:
           cd docs
           wrangler deploy --keep-vars --name=docs-reqo
       rules:
-        - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+        - if: !reference [.rules, default_branch]
           changes:
             - docs/**/*
-        - if: $CI_PIPELINE_SOURCE == "web" && $PIPELINE == "docs"
+        - if: $RUN_ACTION == "docs"
