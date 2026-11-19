@@ -1,4 +1,4 @@
-import { Future } from '@outloud/future'
+import { RequestPromise } from './request_promise.js'
 import type {
   RequestOptions,
   Response,
@@ -58,7 +58,7 @@ export class BaseClient extends Hooks {
     T = unknown,
     D = any,
     Type extends OptionalResponseType = OptionalResponseType,
-  >(options: RequestOptions<D, Type> = {}): Future<Response<T, Type>> {
+  >(options: RequestOptions<D, Type> = {}): RequestPromise<Response<T, Type>> {
     const {
       url = '/',
       method = 'GET',
@@ -97,11 +97,16 @@ export class BaseClient extends Hooks {
 
     const timeoutId = this.totalTimeout(context)
 
-    return Future.withCancel(
-      this.$request<T, Type>(context),
-      () => context.controller.abort(new errors.CanceledError(context)),
-    )
+    const promise = this.$request<T, Type>(context)
       .finally(() => timeoutId && clearTimeout(timeoutId))
+
+    return RequestPromise.create(promise, {
+      cancel: (reason) => context.controller.abort(
+        new errors.CanceledError(context, reason === undefined ? {} : { error: reason as Error }),
+      ),
+      // keeps the error of the previous attempt, if any, as totalTimeout does
+      timeout: () => context.controller.abort(new errors.TimeoutError(context, { error: context.error })),
+    })
   }
 
   /** Combines the client signal with the request signal, either aborts the request. */
@@ -150,8 +155,8 @@ export class BaseClient extends Hooks {
   protected returnData<
     T,
     Type extends OptionalResponseType,
-  >(promise: Future<Response<T, Type>>): Future<Response<T, Type>['data']> {
-    return promise.then((value) => value.data)
+  >(promise: RequestPromise<Response<T, Type>>): RequestPromise<Response<T, Type>['data']> {
+    return RequestPromise.map(promise, (value) => value.data)
   }
 
   private async fetch<T, Type extends OptionalResponseType>(context: Context) {

@@ -1,7 +1,6 @@
-import type { Future } from '@outloud/future'
 import { describe, expectTypeOf, it } from 'vitest'
 import { Client, createClient, createSchemaClient, SchemaClient } from '../src/index.js'
-import type { ClientOptions, Plugin, Untyped } from '../src/index.js'
+import type { ClientOptions, Plugin, RequestPromise, Untyped } from '../src/index.js'
 import type { components, paths } from './data/openapi.js'
 
 // type tests only: requests are never awaited, `fetch` never resolves
@@ -30,12 +29,12 @@ describe('untyped client', () => {
   })
 
   it('types the response data with T', () => {
-    expectTypeOf(api.$get<User>('/users/1')).toEqualTypeOf<Future<User>>()
+    expectTypeOf(api.$get<User>('/users/1')).toEqualTypeOf<RequestPromise<User>>()
     expectTypeOf(api.get<User>('/users/1')).resolves.toHaveProperty('data').toEqualTypeOf<User>()
-    expectTypeOf(api.$get('/users/1')).toEqualTypeOf<Future<unknown>>()
-    expectTypeOf(api.$get<User, never, 'text'>('/users/1')).toEqualTypeOf<Future<string>>()
-    expectTypeOf(api.$get('/users/1', { responseType: 'blob' })).toEqualTypeOf<Future<Blob>>()
-    expectTypeOf(api.$get('/users/1', { responseType: false })).toEqualTypeOf<Future<undefined>>()
+    expectTypeOf(api.$get('/users/1')).toEqualTypeOf<RequestPromise<unknown>>()
+    expectTypeOf(api.$get<User, never, 'text'>('/users/1')).toEqualTypeOf<RequestPromise<string>>()
+    expectTypeOf(api.$get('/users/1', { responseType: 'blob' })).toEqualTypeOf<RequestPromise<Blob>>()
+    expectTypeOf(api.$get('/users/1', { responseType: false })).toEqualTypeOf<RequestPromise<undefined>>()
   })
 
   it('types the body with D', () => {
@@ -99,10 +98,10 @@ describe('typed client', () => {
   })
 
   it('infers the response data', () => {
-    expectTypeOf(api.$get('/museum-hours')).toEqualTypeOf<Future<components['schemas']['MuseumHours']>>()
+    expectTypeOf(api.$get('/museum-hours')).toEqualTypeOf<RequestPromise<components['schemas']['MuseumHours']>>()
     expectTypeOf(api.get('/museum-hours')).resolves.toHaveProperty('data')
       .toEqualTypeOf<components['schemas']['MuseumHours']>()
-    expectTypeOf(api.$get('/museum-hours', { responseType: 'text' })).toEqualTypeOf<Future<string>>()
+    expectTypeOf(api.$get('/museum-hours', { responseType: 'text' })).toEqualTypeOf<RequestPromise<string>>()
   })
 
   it('keeps createSchemaClient and SchemaClient as aliases', () => {
@@ -135,14 +134,14 @@ describe('subclass', () => {
   it('stays untyped by default', () => {
     const api = new ApiClient({ apiKey: 'x', url: 'http://localhost', fetch })
 
-    expectTypeOf(api.$get<User>('/users/1')).toEqualTypeOf<Future<User>>()
+    expectTypeOf(api.$get<User>('/users/1')).toEqualTypeOf<RequestPromise<User>>()
     api.$post('/anything', { data: {} }).catch(ignore)
   })
 
   it('is typed with paths', () => {
     const api = new ApiClient<paths>({ apiKey: 'x', url: 'http://localhost', fetch })
 
-    expectTypeOf(api.$get('/museum-hours')).toEqualTypeOf<Future<components['schemas']['MuseumHours']>>()
+    expectTypeOf(api.$get('/museum-hours')).toEqualTypeOf<RequestPromise<components['schemas']['MuseumHours']>>()
     // @ts-expect-error unknown path
     api.$get('/unknown').catch(ignore)
     // @ts-expect-error params are required
@@ -156,7 +155,7 @@ describe('subclass', () => {
 
     const api = new MuseumClient({ url: 'http://localhost', fetch })
 
-    expectTypeOf(api.$get('/museum-hours')).toEqualTypeOf<Future<components['schemas']['MuseumHours']>>()
+    expectTypeOf(api.$get('/museum-hours')).toEqualTypeOf<RequestPromise<components['schemas']['MuseumHours']>>()
   })
 })
 
@@ -172,7 +171,7 @@ describe('plugins', () => {
     expectTypeOf(createClient<paths>().use(auth)).toEqualTypeOf<Client<paths>>()
     expectTypeOf(new (class extends Client<paths> {})({ url: 'http://localhost', fetch }).use(auth)
       .$get('/museum-hours'))
-      .toEqualTypeOf<Future<components['schemas']['MuseumHours']>>()
+      .toEqualTypeOf<RequestPromise<components['schemas']['MuseumHours']>>()
 
     createClient({ plugins: [auth] })
   })

@@ -1,4 +1,4 @@
-import type { Future } from '@outloud/future'
+import type { RequestPromise } from './request_promise.js'
 import { BaseClient } from './base_client.js'
 import type {
   ClientOptions,
@@ -45,7 +45,7 @@ export type UntypedMethod<ReturnData extends boolean = false> = <
   T,
   D = any,
   Type extends ResponseType = ResponseType,
->(url: string, options?: UntypedRequestOptions<D, Type>) => Future<ResponseOrData<T, Type, ReturnData>>
+>(url: string, options?: UntypedRequestOptions<D, Type>) => RequestPromise<ResponseOrData<T, Type, ReturnData>>
 
 /** Request method of a typed client: paths, options and response data come from the schema. */
 export type SchemaMethod<
@@ -61,7 +61,7 @@ export type SchemaMethod<
   ...options: IsNever<RequiredKeys<SchemaRequestOptions<Operation<Paths, Path, Method>, Type>>> extends true
     ? [options?: SchemaRequestOptions<Operation<Paths, Path, Method>, Type>]
     : [options: SchemaRequestOptions<Operation<Paths, Path, Method>, Type>]
-) => Future<
+) => RequestPromise<
   ResponseOrData<
     SuccessResponse<ResponseObjectMap<Operation<Paths, Path, Method>>, Media>,
     Type,

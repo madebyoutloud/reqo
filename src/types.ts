@@ -8,6 +8,8 @@ export type ValidateFn = (response: Response) => boolean
 
 export type Values = Record<string, any>
 
+export type MaybePromise<T> = T | PromiseLike<T>
+
 export type ResponseType = 'arrayBuffer' | 'blob' | 'json' | 'text' | 'auto'
 export type OptionalResponseType = ResponseType | false
 export type RequestMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS' | 'TRACE'

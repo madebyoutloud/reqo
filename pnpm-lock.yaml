@@ -7,10 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      '@outloud/future':
-        specifier: ^2
-        version: 2.0.1
     devDependencies:
       '@outloud/eslint-config':
         specifier: ^3.0.3
@@ -1931,10 +1927,6 @@ packages:
         optional: true
       vue-eslint-parser:
         optional: true
-
-  '@outloud/future@2.0.1':
-    resolution: {integrity: sha512-yLS/DYB6QA4wvQ7iUoc91ImE9TmW6o04lBcKM9TgdyZGJPmt0fkFv6DeAJO3gWIrg+RmtVeq442EsQaGbQJgdQ==}
-    engines: {node: '>=20'}
 
   '@oxc-parser/binding-android-arm-eabi@0.139.0':
     resolution: {integrity: sha512-22EsXTA3Vc7OvrF4bfT48PFln2UbxkVgrp/Tm32qLw76Dv7SmcInfClJe6yPYamnli6HiqasnESZ5ezN+X4ybg==}
@@ -11404,8 +11396,6 @@ snapshots:
       - eslint-import-resolver-node
       - supports-color
       - typescript
-
-  '@outloud/future@2.0.1': {}
 
   '@oxc-parser/binding-android-arm-eabi@0.139.0':
     optional: true

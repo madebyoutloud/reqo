@@ -5,6 +5,9 @@ export { BaseClient } from './base_client.js'
 export { Client } from './client.js'
 export type { Untyped, Plugin, ClientMethod, UntypedMethod, SchemaMethod } from './client.js'
 
+export { RequestPromise } from './request_promise.js'
+export type { SafeResult } from './request_promise.js'
+
 export { errors } from './errors.js'
 export type { ErrorKind, RequestErrorJSON } from './errors.js'
 

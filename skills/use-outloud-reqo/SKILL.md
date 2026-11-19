@@ -65,6 +65,8 @@ try {
 }
 ```
 
+Or without try/catch: `const [user, error] = await api.$post<User>('/users', { data: payload }).safe()`, with `error` typed as `Error`.
+
 A `RequestError` has `kind` (`http`, `timeout`, `network`, `canceled`, `parse`, `invalid`), `status` (`undefined` without a response), `code` (`E_HTTP`, `E_TIMEOUT`, `E_CANCELED`, `E_PARSE`, `E_INVALID_REQUEST`, or a network code such as `ECONNREFUSED`, `E_NETWORK` without one), `data`, `duration`, `attempts`, `response`, `config` (with the client `id`, `name` and `meta`) and `toJSON()`. Branch on `kind` rather than on `status` or `code` to tell a server error from an unreachable server.
 
 ### Mapping errors in one place
@@ -92,4 +94,4 @@ const report = await api.$get('/reports/{id}', {
 
 ### Cancellation
 
-Every call returns a cancellable promise: keep it and call `request.cancel()`, or pass `signal`. A `signal` in the client options aborts all of its requests. A canceled request rejects with `code` `E_CANCELED`.
+Every call returns a `RequestPromise`: keep it and call `request.cancel()`, or pass `signal`. A `signal` in the client options aborts all of its requests. A canceled request rejects with `code` `E_CANCELED`. `then`, `catch` and `finally` return plain promises without `cancel()`, so cancel the original request. `request.timeout(ms)` rejects with `E_TIMEOUT` and aborts it.
