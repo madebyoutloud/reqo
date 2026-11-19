@@ -48,7 +48,7 @@
     "lint:fix": "oxlint --fix",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
-    "typecheck": "tsc --project tsconfig.test.json --noEmit",
+    "typecheck": "tsc --noEmit",
     "release": "release-it"
   },
   "devDependencies": {
