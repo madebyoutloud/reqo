@@ -90,7 +90,7 @@ export class BaseClient extends Hooks {
       ...rest,
     })
 
-    // eslint-disable-next-line unicorn/error-message
+    // oxlint-disable-next-line unicorn/error-message
     context.stack = new Error().stack
 
     const timeoutId = this.totalTimeout(context)

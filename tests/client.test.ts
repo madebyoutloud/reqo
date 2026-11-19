@@ -1,4 +1,3 @@
-/* eslint-disable max-lines-per-function */
 import { inspect } from 'node:util'
 import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest'
 import { createClient, errors } from '../src/index.js'
@@ -41,7 +40,7 @@ describe('client', () => {
   it('calls custom fetch without binding it to options', async () => {
     let thisValue: unknown = null
     const fetch = function (this: unknown) {
-      // eslint-disable-next-line @typescript-eslint/no-this-alias
+      // oxlint-disable-next-line typescript/no-this-alias
       thisValue = this
       return Promise.resolve(Response.json({}))
     }

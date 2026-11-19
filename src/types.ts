@@ -139,8 +139,8 @@ export interface ErrorRequestState extends Omit<RequestState, 'error' | 'signal'
  * ```
  */
 // an interface, as a type alias can't be merged
-// eslint-disable-next-line @typescript-eslint/consistent-indexed-object-style
 export interface ClientMeta {
+  // oxlint-disable-next-line typescript/consistent-indexed-object-style
   [key: string]: unknown
 }
 

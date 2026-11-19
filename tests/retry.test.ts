@@ -1,4 +1,3 @@
-/* eslint-disable max-lines-per-function */
 import { setTimeout } from 'node:timers/promises'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { http, HttpResponse } from 'msw'
@@ -342,7 +341,7 @@ describe('retry', () => {
     expect(error).toBeInstanceOf(errors.TimeoutError)
     // keeps the error of the previous attempt
     expect(error?.cause).toBeInstanceOf(errors.RequestError)
-    expect((error?.cause as RequestError).status).toBe(503)
+    expect((error?.cause as RequestError | undefined)?.status).toBe(503)
     expect(elapsed).toBeGreaterThanOrEqual(190)
     expect(elapsed).toBeLessThan(400)
   })
