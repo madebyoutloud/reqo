@@ -337,4 +337,17 @@ describe('response body', () => {
     expect(error).toMatchObject({ message: 'Failed to process response data.', status: 200 })
     expect(error?.cause).toBeInstanceOf(SyntaxError)
   })
+
+  it('sends an object as a form-urlencoded body', async () => {
+    const fetch = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => Response.json({}))
+
+    await createClient({ url: 'http://localhost', fetch }).post('/form', {
+      data: { name: 'a b', tags: ['x', 'y'], nested: { key: '&' } },
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    })
+
+    const body = new URLSearchParams(fetch.mock.calls[0]![1]!.body as string)
+
+    expect([...body]).toEqual([['name', 'a b'], ['tags[]', 'x'], ['tags[]', 'y'], ['nested[key]', '&']])
+  })
 })

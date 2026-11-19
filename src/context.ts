@@ -85,7 +85,8 @@ export class Context implements RequestState {
 
     if (typeof body === 'object') {
       if (contentType.includes('application/x-www-form-urlencoded')) {
-        return buildQuery(body as Values)
+        // fetch would send the entries array as `a,1,b,2`
+        return new URLSearchParams(buildQuery(body as Values)).toString()
       }
 
       this.config.headers.set('content-type', 'application/json')
