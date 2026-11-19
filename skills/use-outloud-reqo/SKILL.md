@@ -27,6 +27,7 @@ Query values are serialized for you: `null` and `undefined` are skipped, arrays 
 ## Valid alternatives
 
 - `reqo`, the client the package exports, for one-off requests to absolute URLs in scripts.
+- `rateLimit({ limit, interval })`, imported from `@outloud/reqo/plugins/ratelimit`, in `plugins` when an API limits requests, e.g. `{ limit: 100, interval: 60_000 }` for 100 a minute. Pass the same plugin to clients that share the limit. It waits in order, counts retries, and counts against `totalTimeout`, not `timeout`.
 - `responseType: 'json' | 'text' | 'blob' | 'arrayBuffer'` when `auto` is wrong. `auto` reads JSON for a JSON content type, text for plain text or no content type, and a `Blob` for any other type. `false` doesn't read the body.
 - A `validate(response)` client option, when an API answers successfully with a status outside 2xx.
 - `api.request({ method: 'OPTIONS', url })` for a method without a shortcut.
