@@ -1,3 +1,4 @@
+import type { BaseClient } from './base_client.js'
 import type { Plugin } from './client.js'
 import type { errors } from './errors.js'
 import type { Headers } from './headers.js'
@@ -62,6 +63,8 @@ export interface RequestConfig<D = any, Type extends OptionalResponseType = any>
   name?: string
   /** Metadata of the client, a shallow copy of `ClientOptions.meta` */
   meta?: ClientMeta
+  /** Client that made the request */
+  client?: BaseClient
 
   url: string
   method: RequestMethod

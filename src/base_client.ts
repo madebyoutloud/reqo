@@ -1,6 +1,6 @@
 import { contentTypes } from './constants.js'
 import { Context } from './context.js'
-import { abortError, errors, toRequestError } from './errors.js'
+import { abortError, errors, isRequestError, toRequestError } from './errors.js'
 import { Headers } from './headers.js'
 import { Hooks } from './hooks.js'
 import { RequestPromise } from './request_promise.js'
@@ -72,6 +72,7 @@ export class BaseClient extends Hooks {
       headers: new Headers(this.options.headers).set(headers ?? {}, true),
       signal: this.signal(signal),
       ...rest,
+      client: this,
     })
 
     // oxlint-disable-next-line unicorn/error-message
@@ -128,8 +129,17 @@ export class BaseClient extends Hooks {
     return response
   }
 
+  /** Returns true for a `RequestError` of any client, use `isOwnError()` to match only errors of this client */
   isError(value: unknown): value is errors['RequestError'] {
-    return value instanceof errors.RequestError
+    return isRequestError(value)
+  }
+
+  /**
+   * Returns true for a `RequestError` of this client. An error of another client doesn't match,
+   * also when it's thrown inside a request of this client, e.g. from a hook.
+   */
+  isOwnError(value: unknown): value is errors['RequestError'] {
+    return isRequestError(value) && value.config.client === this
   }
 
   protected returnData<T, Type extends OptionalResponseType>(

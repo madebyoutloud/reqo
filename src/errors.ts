@@ -148,6 +148,14 @@ export class RequestError extends Error {
   }
 }
 
+/**
+ * Returns true for a `RequestError` of any client, the same as `client.isError()`.
+ * Use `client.isOwnError()` to match only the errors of one client.
+ */
+export function isRequestError(value: unknown): value is RequestError {
+  return value instanceof RequestError
+}
+
 export class TimeoutError extends RequestError {
   kind = 'timeout' as const
   code = 'E_TIMEOUT'

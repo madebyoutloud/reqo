@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { RequestError } from '../src/errors.js'
-import { createClient, errors } from '../src/index.js'
+import { createClient, errors, isRequestError, reqo } from '../src/index.js'
 import { catchError } from './helpers.js'
 
 function clientWith(fetch: (input: string | URL | Request, init?: RequestInit) => Promise<Response>) {
@@ -172,5 +172,85 @@ describe('toJSON', () => {
 
     expect(error.data).toEqual({ a: 1 })
     expect(error.config.data).toEqual({ b: 2 })
+  })
+})
+
+describe('isError, isOwnError and isRequestError', () => {
+  const notFound = async () => Response.json({ error: 'nope' }, { status: 404 })
+
+  it('isError and isRequestError match errors of any client', async () => {
+    const a = clientWith(notFound)
+    const b = clientWith(notFound)
+    const error = await failure(a.get('/x'))
+
+    expect(a.isError(error)).toBe(true)
+    expect(b.isError(error)).toBe(true)
+    expect(reqo.isError(error)).toBe(true)
+    expect(isRequestError(error)).toBe(true)
+  })
+
+  it('isOwnError matches only the errors of its own client', async () => {
+    const a = clientWith(notFound)
+    const b = clientWith(notFound)
+    const error = await failure(a.get('/x'))
+
+    expect(error.config.client).toBe(a)
+    expect(a.isOwnError(error)).toBe(true)
+    expect(b.isOwnError(error)).toBe(false)
+    expect(reqo.isOwnError(error)).toBe(false)
+  })
+
+  it('isOwnError does not match the error of a nested call to another client', async () => {
+    const b = clientWith(notFound)
+    const a = clientWith(async () => {
+      await b.get('/inner')
+      return Response.json({})
+    })
+
+    const error = await failure(a.get('/outer'))
+
+    expect(error.status).toBe(404)
+    expect(a.isError(error)).toBe(true)
+    expect(a.isOwnError(error)).toBe(false)
+    expect(b.isOwnError(error)).toBe(true)
+  })
+
+  it('isOwnError matches timeout and canceled errors of its own client', async () => {
+    const client = createClient({ url: 'http://localhost' })
+    const timeout = await failure(client.get('/long', { timeout: 20 }))
+    const request = client.get('/long')
+    request.cancel()
+    const canceled = await failure(request)
+
+    expect(client.isOwnError(timeout)).toBe(true)
+    expect(client.isOwnError(canceled)).toBe(true)
+  })
+
+  it('a client request option does not override the owner', async () => {
+    const a = clientWith(notFound)
+    const b = clientWith(notFound)
+    const error = await failure(a.get('/x', { client: b } as object))
+
+    expect(a.isOwnError(error)).toBe(true)
+    expect(b.isOwnError(error)).toBe(false)
+  })
+
+  it('none match other values or an error replaced by an error hook', async () => {
+    const client = clientWith(notFound)
+    client.on('error', () => new Error('mapped'))
+
+    const [, error] = await catchError(client.get('/x'))
+
+    for (const value of [error, new Error('nope'), null, 'E_HTTP', { kind: 'http', status: 404 }]) {
+      expect(isRequestError(value)).toBe(false)
+      expect(client.isError(value)).toBe(false)
+      expect(client.isOwnError(value)).toBe(false)
+    }
+  })
+
+  it('keeps the client out of JSON', async () => {
+    const error = await failure(clientWith(notFound).get('/x'))
+
+    expect(error.toJSON().client).toBe('aml')
   })
 })

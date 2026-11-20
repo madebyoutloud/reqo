@@ -8,7 +8,7 @@ export type { Untyped, Plugin, PluginFn, PluginObject, ClientMethod, UntypedMeth
 export { RequestPromise } from './request_promise.js'
 export type { SafeResult } from './request_promise.js'
 
-export { errors } from './errors.js'
+export { errors, isRequestError } from './errors.js'
 export type { ErrorKind, RequestErrorJSON } from './errors.js'
 
 export type {
