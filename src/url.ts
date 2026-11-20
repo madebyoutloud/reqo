@@ -7,6 +7,16 @@ export class MissingParamError extends Error {
 }
 
 /**
+ * Returns the path template of a request URL, without the origin, query and hash, e.g. `/users/{id}`.
+ * Doesn't parse the URL, so placeholders are kept as they are.
+ */
+export function urlPath(url: string): string {
+  const path = url.replace(/^[a-z][\d+.a-z-]*:\/\/[^/?#]*/i, '').replace(/[?#].*$/s, '')
+
+  return path.startsWith('/') ? path : `/${path}`
+}
+
+/**
  * Fills `{name}` placeholders of the URL with encoded path parameters and appends the query.
  * Throws `MissingParamError` for a missing parameter, a `TypeError` for an invalid URL.
  */

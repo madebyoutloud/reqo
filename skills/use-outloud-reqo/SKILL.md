@@ -38,7 +38,7 @@ Query values are serialized for you: `null` and `undefined` are skipped, arrays 
 
 - Retrying writes. Retries are off unless you pass `retry`. Then only `GET`, `HEAD` and `OPTIONS` retry, on transient status codes and network errors. Add `methods: ['POST']` only when the endpoint is idempotent.
 - Retries without `totalTimeout` on requests a user waits for. `timeout`, 60 seconds by default, applies to each attempt, and a timed-out attempt is retried like a network error.
-- Logging the error object or its `config`. `error.config` holds the request headers, credentials included. Log `error.toJSON()`: client, method, full URL, status, kind, code, duration and attempts, without headers and bodies. It doesn't mask values in the URL, and bodies (`error.config.data`, `error.data`) go through the logger's redaction if you log them.
+- Logging the error object or its `config`. `error.config` holds the request headers, credentials included. Log `error.toJSON()`: client, method, full URL, path template (`/users/{id}`), status, kind, code and message, without headers, bodies, duration and attempts. It doesn't mask values in the URL, and bodies (`error.config.data`, `error.data`) go through the logger's redaction if you log them.
 - Building query strings or putting values into the path by hand.
 
 ## Invalid patterns
@@ -68,7 +68,7 @@ try {
 
 Or without try/catch: `const [user, error] = await api.$post<User>('/users', { data: payload }).safe()`, with `error` typed as `Error`.
 
-A `RequestError` has `kind` (`http`, `timeout`, `network`, `canceled`, `parse`, `invalid`), `status` (`undefined` without a response), `code` (`E_HTTP`, `E_TIMEOUT`, `E_CANCELED`, `E_PARSE`, `E_INVALID_REQUEST`, or a network code such as `ECONNREFUSED`, `E_NETWORK` without one), `data`, `duration`, `attempts`, `response`, `config` (with the client `id`, `name` and `meta`) and `toJSON()`. Branch on `kind` rather than on `status` or `code` to tell a server error from an unreachable server.
+A `RequestError` has `kind` (`http`, `timeout`, `network`, `canceled`, `parse`, `invalid`), `status` (`undefined` without a response), `code` (`E_HTTP`, `E_TIMEOUT`, `E_CANCELED`, `E_PARSE`, `E_INVALID_REQUEST`, or a network code such as `ECONNREFUSED`, `E_NETWORK` without one), `data` (the response body, not enumerable, so spreads and loggers leave it out; read it as `error.data`), `duration` and `attempts` (not enumerable either), `response`, `config` (with the client `id`, `name` and `meta`, and `path`, the URL template as passed, e.g. `/users/{id}`) and `toJSON()`. The message names the client and endpoint, e.g. `aml: GET /users/{id} failed with status 404.`; branch on `kind`, `status` and `code`, never on the message text. Branch on `kind` rather than on `status` or `code` to tell a server error from an unreachable server.
 
 ### Mapping errors in one place
 

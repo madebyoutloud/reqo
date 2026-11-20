@@ -77,7 +77,7 @@ describe('client', () => {
 
     expect(error).toBeInstanceOf(errors.CanceledError)
     expect(error).toMatchObject({
-      message: 'Request was canceled.',
+      message: 'test: GET /long was canceled.',
       code: 'E_CANCELED',
     })
   })
@@ -91,7 +91,7 @@ describe('client', () => {
     const [, error] = await catchError(request)
 
     expect(error).toBeInstanceOf(errors.CanceledError)
-    expect(error).toMatchObject({ code: 'E_CANCELED', message: 'Request was canceled.' })
+    expect(error).toMatchObject({ code: 'E_CANCELED', message: 'test: GET /long was canceled.' })
     expect(error?.cause).toBe(controller.signal.reason)
   })
 
@@ -108,7 +108,7 @@ describe('client', () => {
     const [, error] = await catchError(client.get('/long', { signal }))
 
     expect(error).toBeInstanceOf(errors.TimeoutError)
-    expect(error).toMatchObject({ code: 'E_TIMEOUT', message: 'Request timed out.' })
+    expect(error).toMatchObject({ code: 'E_TIMEOUT', message: 'test: GET /long timed out.' })
     expect(error?.cause).toBe(signal.reason)
   })
 
@@ -138,7 +138,7 @@ describe('client', () => {
 
     expect(error).toMatchObject({
       code: 'E_TIMEOUT',
-      message: 'Request timed out.',
+      message: 'test: GET /long timed out.',
     })
   })
 
@@ -146,10 +146,8 @@ describe('client', () => {
     const [, error] = await catchError(client.get('/error'))
 
     expect(error).toBeInstanceOf(errors.RequestError)
-    expect(error).toMatchObject({
-      status: 502,
-      data: { error: { message: 'Unknown error' } },
-    })
+    expect(error).toMatchObject({ status: 502 })
+    expect((error as RequestError).data).toEqual({ error: { message: 'Unknown error' } })
   })
 
   it('serializes error', async () => {
@@ -159,13 +157,12 @@ describe('client', () => {
     expect(json).toEqual({
       client: 'test',
       url: 'http://localhost/error?test=1',
+      path: '/error',
       method: 'GET',
       kind: 'http',
       code: 'E_HTTP',
-      message: error?.message,
+      message: 'test: GET /error failed with status 502.',
       status: 502,
-      duration: expect.any(Number),
-      attempts: 1,
     })
     // bodies are left out
     expect(json).not.toHaveProperty('responseBody')
@@ -200,6 +197,7 @@ describe('client', () => {
     const id = 123
     const context = new Context({
       url: 'http://localhost/v1/posts/{id}',
+      path: '/v1/posts/{id}',
       method: 'GET',
       query: {},
       params: { id },
@@ -215,6 +213,7 @@ describe('client', () => {
     const id = [1, 2, 3]
     const context = new Context({
       url: 'http://localhost/text',
+      path: '/text',
       method: 'GET',
       query: { id },
       params: {},
@@ -329,7 +328,7 @@ describe('response body', () => {
     const [, error] = await catchError(createClient({ url: 'http://localhost', fetch }).get('/error'))
 
     expect(error).toBeInstanceOf(errors.RequestError)
-    expect(error).toMatchObject({ message: 'Request failed with status code 502.', status: 502 })
+    expect(error).toMatchObject({ message: 'GET /error failed with status 502.', status: 502 })
   })
 
   it('throws parse error when success body does not parse', async () => {
@@ -343,7 +342,7 @@ describe('response body', () => {
     const [, error] = await catchError(createClient({ url: 'http://localhost', fetch }).get('/json'))
 
     expect(error).toBeInstanceOf(errors.RequestError)
-    expect(error).toMatchObject({ message: 'Failed to process response data.', status: 200 })
+    expect(error).toMatchObject({ message: 'GET /json failed to process response data.', status: 200 })
     expect(error?.cause).toBeInstanceOf(SyntaxError)
   })
 

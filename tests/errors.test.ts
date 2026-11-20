@@ -1,5 +1,9 @@
+import { inspect } from 'node:util'
 import { describe, expect, it, vi } from 'vitest'
+import type { Client } from '../src/client.js'
+import { Context } from '../src/context.js'
 import type { RequestError } from '../src/errors.js'
+import { Headers } from '../src/headers.js'
 import { createClient, errors, isRequestError, reqo } from '../src/index.js'
 import { catchError } from './helpers.js'
 
@@ -19,7 +23,9 @@ describe('error kinds', () => {
   it('http', async () => {
     const error = await failure(clientWith(async () => Response.json({ error: 'nope' }, { status: 404 })).get('/x'))
 
-    expect(error).toMatchObject({ kind: 'http', code: 'E_HTTP', status: 404, data: { error: 'nope' }, attempts: 1 })
+    expect(error).toMatchObject({ kind: 'http', code: 'E_HTTP', status: 404 })
+    expect(error.attempts).toBe(1)
+    expect(error.data).toEqual({ error: 'nope' })
   })
 
   it('network, with the code of the cause', async () => {
@@ -39,7 +45,8 @@ describe('error kinds', () => {
     const error = await failure(createClient({ url: 'http://localhost' }).get('/long', { timeout: 20 }))
 
     expect(error).toBeInstanceOf(errors.TimeoutError)
-    expect(error).toMatchObject({ kind: 'timeout', code: 'E_TIMEOUT', status: undefined, attempts: 1 })
+    expect(error).toMatchObject({ kind: 'timeout', code: 'E_TIMEOUT', status: undefined })
+    expect(error.attempts).toBe(1)
   })
 
   it('canceled', async () => {
@@ -68,7 +75,8 @@ describe('error kinds', () => {
     const fetch = vi.fn(async () => Response.json({}))
     const error = await failure(clientWith(fetch).get('/users/{id}'))
 
-    expect(error).toMatchObject({ kind: 'invalid', code: 'E_INVALID_REQUEST', attempts: 1 })
+    expect(error).toMatchObject({ kind: 'invalid', code: 'E_INVALID_REQUEST' })
+    expect(error.attempts).toBe(1)
     expect(error.message).toBe('Missing value for path parameter "id".')
     expect(fetch).not.toBeCalled()
   })
@@ -92,6 +100,18 @@ describe('error duration and attempts', () => {
     expect(fetch).toBeCalledTimes(3)
     expect(error.attempts).toBe(3)
     expect(error.duration).toBeGreaterThanOrEqual(40)
+  })
+
+  it('are readable, but not enumerable and not in toJSON', async () => {
+    const error = await failure(clientWith(async () => Response.json({}, { status: 500 })).get('/x'))
+
+    expect(error.attempts).toBe(1)
+    expect(error.duration).toBeTypeOf('number')
+    expect(Object.keys(error)).not.toContain('attempts')
+    expect(Object.keys(error)).not.toContain('duration')
+    expect(error.toJSON()).not.toHaveProperty('attempts')
+    expect(error.toJSON()).not.toHaveProperty('duration')
+    expect(JSON.parse(JSON.stringify(error))).not.toHaveProperty('duration')
   })
 })
 
@@ -137,13 +157,11 @@ describe('toJSON', () => {
       clientName: 'AML service',
       method: 'POST',
       url: 'http://localhost/users/7?page=2',
-      params: { id: 7 },
+      path: '/users/{id}',
       status: 422,
       kind: 'http',
       code: 'E_HTTP',
-      message: 'Request failed with status code 422.',
-      duration: expect.any(Number),
-      attempts: 1,
+      message: 'AML service: POST /users/{id} failed with status 422.',
     })
 
     const serialized = JSON.stringify(error)
@@ -172,6 +190,134 @@ describe('toJSON', () => {
 
     expect(error.data).toEqual({ a: 1 })
     expect(error.config.data).toEqual({ b: 2 })
+  })
+})
+
+describe('response data', () => {
+  it('is readable and writable, but not enumerable', async () => {
+    const error = await failure(
+      clientWith(async () => Response.json({ secret: '__BODY__' }, { status: 500 })).get('/x'),
+    )
+
+    expect(error.data).toEqual({ secret: '__BODY__' })
+    expect(Object.keys(error)).not.toContain('data')
+    expect({ ...error }).not.toHaveProperty('data')
+    expect(JSON.stringify(error)).not.toContain('__BODY__')
+
+    error.data = { replaced: true }
+
+    expect(error.data).toEqual({ replaced: true })
+    expect(Object.keys(error)).not.toContain('data')
+  })
+
+  it('stays out of console.log, also as a nested cause', async () => {
+    const inner = await failure(
+      clientWith(async () => Response.json({ secret: '__BODY__' }, { status: 500 })).get('/x'),
+    )
+    const outer = new Error('outer', { cause: inner })
+
+    expect(inspect(inner, { depth: 5 })).not.toContain('__BODY__')
+    expect(inspect(outer, { depth: 5 })).not.toContain('__BODY__')
+  })
+})
+
+describe('path', () => {
+  async function pathOf(client: Client, url: string, options = {}) {
+    const error = await failure(client.get(url, options))
+
+    expect(error.toJSON().path).toBe(error.config.path)
+
+    return error.config.path
+  }
+
+  const notFound = async () => Response.json({}, { status: 404 })
+
+  it('is the template of the request path, without the query', async () => {
+    expect(await pathOf(clientWith(notFound), '/users/{id}', { params: { id: 7 }, query: { page: 1 } })).toBe(
+      '/users/{id}',
+    )
+  })
+
+  it('adds the leading slash and strips a query and hash in the path', async () => {
+    expect(await pathOf(clientWith(notFound), 'users/{id}?page=1#top', { params: { id: 7 } })).toBe('/users/{id}')
+  })
+
+  it('leaves out the path of the base URL', async () => {
+    const client = createClient({ id: 'aml', url: 'http://localhost/api', fetch: notFound })
+    const error = await failure(client.get('/users/{id}', { params: { id: 7 } }))
+
+    expect(error.config.path).toBe('/users/{id}')
+    expect(error.toJSON().url).toBe('http://localhost/api/users/7')
+    expect(error.message).toBe('aml: GET /users/{id} failed with status 404.')
+  })
+
+  it('is the pathname of an absolute URL', async () => {
+    const client = clientWith(notFound)
+
+    expect(await pathOf(client, 'https://other.test:8080/v2/items/{id}?x=1', { params: { id: 1 } })).toBe(
+      '/v2/items/{id}',
+    )
+    expect(await pathOf(client, 'https://other.test')).toBe('/')
+  })
+
+  it('is / without a URL', async () => {
+    const error = await failure(clientWith(notFound).request())
+
+    expect(error.config.path).toBe('/')
+  })
+})
+
+describe('message', () => {
+  const failing = async () => Response.json({}, { status: 500 })
+
+  it('names the client by name, then id, and the endpoint by its template', async () => {
+    const named = createClient({ id: 'aml', name: 'AML service', url: 'http://localhost', fetch: failing })
+    const withId = createClient({ id: 'aml', url: 'http://localhost', fetch: failing })
+    const anonymous = createClient({ url: 'http://localhost', fetch: failing })
+    const options = { params: { id: '__ID__' }, query: { token: '__TOKEN__' } }
+
+    expect((await failure(named.delete('/users/{id}', options))).message).toBe(
+      'AML service: DELETE /users/{id} failed with status 500.',
+    )
+    expect((await failure(withId.delete('/users/{id}', options))).message).toBe(
+      'aml: DELETE /users/{id} failed with status 500.',
+    )
+    expect((await failure(anonymous.delete('/users/{id}', options))).message).toBe(
+      'DELETE /users/{id} failed with status 500.',
+    )
+  })
+
+  it('names the endpoint for network, timeout, canceled and parse errors', async () => {
+    const network = await failure(clientWith(() => Promise.reject(new TypeError('fetch failed'))).get('/x'))
+    const timeout = await failure(createClient({ id: 'aml', url: 'http://localhost' }).get('/long', { timeout: 20 }))
+    const request = createClient({ id: 'aml', url: 'http://localhost' }).get('/long')
+    request.cancel()
+    const canceled = await failure(request)
+    const parse = await failure(
+      clientWith(async () => new Response('{"broken', { headers: { 'content-type': 'application/json' } })).get('/x'),
+    )
+
+    expect(network.message).toBe('AML service: GET /x failed due to a network error.')
+    expect(timeout.message).toBe('aml: GET /long timed out.')
+    expect(canceled.message).toBe('aml: GET /long was canceled.')
+    expect(parse.message).toBe('AML service: GET /x failed to process response data.')
+  })
+
+  it('keeps a custom message', () => {
+    const context = new Context({
+      id: 'aml',
+      url: 'http://localhost/x',
+      path: '/x',
+      method: 'GET',
+      query: {},
+      params: {},
+      headers: new Headers(),
+    })
+
+    expect(new errors.RequestError(context, { message: 'custom' }).message).toBe('custom')
+    expect(new errors.TimeoutError(context, { message: 'custom' }).message).toBe('custom')
+    expect(new errors.CanceledError(context, { message: 'custom' }).message).toBe('custom')
+    expect(new errors.TimeoutError(context).message).toBe('aml: GET /x timed out.')
   })
 })
 

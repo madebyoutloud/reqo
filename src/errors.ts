@@ -30,15 +30,12 @@ export interface RequestErrorJSON {
   method: RequestMethod
   /** Full URL with path parameters and query, or the URL template if it couldn't be built */
   url: string
-  /** Path parameters, left out when empty */
-  params?: Record<string, any>
+  /** Path template as passed to the request, without the base URL, query and hash, e.g. `/users/{id}` */
+  path: string
   status?: number
   kind: ErrorKind
   code: string
   message: string
-  /** Duration of the whole request in milliseconds, including retries */
-  duration: number
-  attempts: number
 }
 
 const HiddenProps = ['config', 'response'] as const
@@ -59,10 +56,6 @@ function errorCode(error: unknown): string | undefined {
   return typeof code === 'string' && code ? code : undefined
 }
 
-function isEmpty(value: unknown) {
-  return value === undefined || value === null || (typeof value === 'object' && Object.keys(value).length === 0)
-}
-
 export class RequestError extends Error {
   /** Request config, holds headers, so it's not enumerable */
   declare config: RequestConfig
@@ -79,14 +72,14 @@ export class RequestError extends Error {
   /** HTTP status code of the response, `undefined` without a response */
   status?: number
 
-  /** Response data, if available */
-  data?: any
+  /** Response data, if available, not enumerable, so loggers and spreads don't copy the response body */
+  declare data?: any
 
-  /** Duration of the whole request in milliseconds until the error, including retries */
-  duration: number
+  /** Duration of the whole request in milliseconds until the error, including retries, not enumerable */
+  declare duration: number
 
-  /** Number of attempts made, `0` when the request failed before the first one */
-  attempts: number
+  /** Number of attempts made, `0` when the request failed before the first one, not enumerable */
+  declare attempts: number
 
   constructor(context: Context, options: ErrorOptions = {}) {
     super(options.message ?? options.error?.message)
@@ -99,6 +92,17 @@ export class RequestError extends Error {
       Object.defineProperty(this, prop, { value: context[prop], enumerable: false, writable: false })
     }
 
+    // not enumerable, so loggers and spreads don't copy them; writable, e.g. an error hook may replace the body
+    const details = {
+      data: this.response?.data,
+      duration: Date.now() - context.startAt,
+      attempts: context.attempts,
+    }
+
+    for (const [prop, value] of Object.entries(details)) {
+      Object.defineProperty(this, prop, { value, enumerable: false, writable: true, configurable: true })
+    }
+
     this.kind = options.kind ?? (this.response ? 'http' : 'network')
     // fetch rejects network failures with `TypeError: fetch failed`, the code (e.g. `UND_ERR_SOCKET`) is on its cause
     this.code =
@@ -107,10 +111,7 @@ export class RequestError extends Error {
       defaultCodes[this.kind]
 
     this.status = this.response?.status
-    this.duration = Date.now() - context.startAt
-    this.attempts = context.attempts
     options.error && (this.cause = options.error)
-    this.response?.data !== undefined && (this.data = this.response.data)
   }
 
   /** Full URL of the request, with path parameters and query, or the URL template if it can't be built */
@@ -124,7 +125,7 @@ export class RequestError extends Error {
 
   /**
    * Returns a summary of the request and the failure as plain JSON, used by `JSON.stringify()`.
-   * Leaves out headers and bodies; values in the URL and `params` are not masked.
+   * Leaves out headers and bodies; values in the URL are not masked.
    */
   toJSON(): RequestErrorJSON {
     const config = this.config
@@ -134,13 +135,11 @@ export class RequestError extends Error {
       clientName: config.name,
       method: config.method,
       url: this.fullUrl(),
-      params: isEmpty(config.params) ? undefined : config.params,
+      path: config.path,
       status: this.status,
       kind: this.kind,
       code: this.code,
       message: this.message,
-      duration: this.duration,
-      attempts: this.attempts,
     }
 
     // drops undefined values, the result is the same as after JSON serialization
@@ -159,13 +158,30 @@ export function isRequestError(value: unknown): value is RequestError {
 export class TimeoutError extends RequestError {
   kind = 'timeout' as const
   code = 'E_TIMEOUT'
-  message = 'Request timed out.'
+
+  constructor(context: Context, options: ErrorOptions = {}) {
+    super(context, { ...options, message: options.message ?? `${describeRequest(context.config)} timed out.` })
+  }
 }
 
 export class CanceledError extends RequestError {
   kind = 'canceled' as const
   code = 'E_CANCELED'
-  message = 'Request was canceled.'
+
+  constructor(context: Context, options: ErrorOptions = {}) {
+    super(context, { ...options, message: options.message ?? `${describeRequest(context.config)} was canceled.` })
+  }
+}
+
+/**
+ * Names the client and the endpoint for error messages, e.g. `AML service: GET /users/{id}`.
+ * Uses the path template, so the message holds no path parameters or query.
+ */
+export function describeRequest(config: RequestConfig): string {
+  const label = config.name ?? config.id
+  const request = `${config.method} ${config.path}`
+
+  return label ? `${label}: ${request}` : request
 }
 
 /**
@@ -180,7 +196,7 @@ export function toRequestError(context: Context, error: unknown): RequestError {
   return new RequestError(context, {
     error: error as Error,
     kind: 'network',
-    message: 'Request failed due to a network error.',
+    message: `${describeRequest(context.config)} failed due to a network error.`,
   })
 }
 

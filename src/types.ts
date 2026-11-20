@@ -66,7 +66,13 @@ export interface RequestConfig<D = any, Type extends OptionalResponseType = any>
   /** Client that made the request */
   client?: BaseClient
 
+  /** Full URL template, with the base URL, e.g. `http://api/v1/users/{id}` */
   url: string
+  /**
+   * Path template as passed to the request, without the base URL, query and hash, e.g. `/users/{id}`;
+   * the pathname for an absolute URL. Identifies the endpoint within a client.
+   */
+  path: string
   method: RequestMethod
   query: Values
   params: Values

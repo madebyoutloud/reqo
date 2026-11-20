@@ -1,11 +1,12 @@
 import { contentTypes } from './constants.js'
 import { Context } from './context.js'
-import { abortError, errors, isRequestError, toRequestError } from './errors.js'
+import { abortError, describeRequest, errors, isRequestError, toRequestError } from './errors.js'
 import { Headers } from './headers.js'
 import { Hooks } from './hooks.js'
 import { RequestPromise } from './request_promise.js'
 import { Retry } from './retry.js'
 import type { RequestOptions, Response, OptionalResponseType, ClientOptions } from './types.js'
+import { urlPath } from './url.js'
 
 const URL_REGEX = /^https?:\/\//
 
@@ -72,6 +73,7 @@ export class BaseClient extends Hooks {
       headers: new Headers(this.options.headers).set(headers ?? {}, true),
       signal: this.signal(signal),
       ...rest,
+      path: urlPath(url),
       client: this,
     })
 
@@ -217,13 +219,15 @@ export class BaseClient extends Hooks {
         throw new errors.RequestError(context, {
           error: error as Error,
           kind: 'parse',
-          message: 'Failed to process response data.',
+          message: `${describeRequest(context.config)} failed to process response data.`,
         })
       }
     }
 
     if (!valid) {
-      throw new errors.RequestError(context, { message: `Request failed with status code ${response.status}.` })
+      throw new errors.RequestError(context, {
+        message: `${describeRequest(context.config)} failed with status ${response.status}.`,
+      })
     }
 
     return response
